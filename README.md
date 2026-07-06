@@ -1,4 +1,5 @@
 # BHUMI — Kisan Alert
+**Bharat's Harvest Understanding & Monitoring Intelligence**
 
 **Voice-first agricultural intelligence for small and marginal farmers.**
 
