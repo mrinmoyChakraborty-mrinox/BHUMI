@@ -53,9 +53,9 @@ BHUMI/
 ├── README.md                  ← You are here
 ├── frontend/
 │   ├── README.md              Docs Viewer + RSK Dashboard
-│   ├── index.html             Vite-based planning-doc viewer
+│   ├── index.html             Vite-based doc viewer
 │   ├── src/main.ts            Static doc viewer app
-│   └── public/md/             Planning document markdown files
+│   └── public/md/             Documentation markdown files
 ├── backend/
 │   ├── README.md              Full backend setup & API reference
 │   ├── app/
@@ -67,9 +67,6 @@ BHUMI/
 │   │   └── routers/            13 route modules (recommend, alerts, dashboard, etc.)
 │   ├── scripts/seed_data.py   Real Guntur district data seeder
 │   └── firestore.rules        Locks down direct client Firestore access
-├── BWA/                        Planning documents (PRD, architecture, schema, etc.)
-│   ├── 00_README.md → 10_*.md
-│   └── README.md
 ├── .env.example               Env var template
 ├── .gitignore
 └── requirements.txt
@@ -178,25 +175,4 @@ Full endpoint details in `backend/README.md`.
 2. 📷 **Upload crop photo** → Gemini Diagnosis in ~10s → flagged on dashboard for RSK follow-up
 3. 📋 **Show recommendation** with source data visible next to AI output ("rainfall X mm, soil type Y, groundwater Z m") — proves it's not a black box
 
----
 
-## 📚 Planning documents
-
-All product, architecture, and technical planning docs live in `BWA/`. Read in this order:
-
-1. **`01_PRD.md`** — Problem, scope, user stories, rubric alignment
-2. **`02_ARCHITECTURE.md`** — Stack decisions, system diagram, data flow
-3. **`03_SCHEMA.md`** — Supabase/Firestore schema
-4. **`04_TASKS.md`** — Hour-by-hour build tracker
-5. **`05_PITCH_OUTLINE.md`** — 5-minute demo script
-6. **`06_PROMPTS.md`** — Gemini prompt templates + anti-hallucination strategy
-7. **`07_API_SPEC.md`** — FastAPI endpoint contracts
-8. **`08_REAL_DATA_GUNTUR.md`** — Real district data (Guntur, AP)
-9. **`09_IMD_SOIL_CGWB_INTEGRATION.md`** — Government data source integration guide
-10. **`10_VIBECODING_PROMPTS.md`** — AI coding assistant prompts
-
-Or browse them visually:
-
-```bash
-cd frontend && npm run dev
-```
