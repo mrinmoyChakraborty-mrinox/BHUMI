@@ -1,0 +1,14 @@
+rules_version = '2';
+
+// All reads/writes are meant to go through the FastAPI backend using the
+// Firebase Admin SDK, which bypasses these rules entirely. These rules exist
+// only to lock down DIRECT client-side access to Firestore (e.g. if a
+// frontend ever adds the Firebase JS SDK directly) so that, at minimum,
+// unauthenticated users can't read/write your data straight from the browser.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
