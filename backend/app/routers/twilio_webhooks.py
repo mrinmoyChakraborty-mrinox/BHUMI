@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Form, Query, Response
+from fastapi import APIRouter, Depends, Form, Query, Response
 
 from app.firebase_client import db
+from app.routers.deps import verify_twilio_webhook
 from app.services.twilio_service import build_confirmation_twiml, DIGIT_MEANING
 
 router = APIRouter(prefix="/twilio", tags=["Twilio Webhooks"])
@@ -15,7 +16,7 @@ def _find_alert_by_call_sid(call_sid: str) -> str | None:
     return None
 
 
-@router.post("/voice-response")
+@router.post("/voice-response", dependencies=[Depends(verify_twilio_webhook)])
 async def voice_response(
     alert_id: str | None = Query(default=None),
     Digits: str = Form(default=""),
@@ -49,7 +50,7 @@ async def voice_response(
     return Response(content=str(twiml), media_type="application/xml")
 
 
-@router.post("/sms-response")
+@router.post("/sms-response", dependencies=[Depends(verify_twilio_webhook)])
 async def sms_response(From: str = Form(default=""), Body: str = Form(default="")):
     """Inbound SMS reply handler — matches the farmer by phone number and logs
     the free-text reply against their most recent alert."""

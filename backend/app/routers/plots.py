@@ -10,14 +10,28 @@ router = APIRouter(prefix="/plots", tags=["Plots"])
 COLLECTION = "plots"
 
 
-@router.get("", response_model=list[PlotOut])
-def list_plots(farmer_id: str | None = None, ward_id: str | None = None):
+@router.get("", response_model=dict)
+def list_plots(
+    farmer_id: str | None = None,
+    ward_id: str | None = None,
+    limit: int = 50,
+    start_after: str | None = None,
+):
     query = db.collection(COLLECTION)
     if farmer_id:
         query = query.where("farmer_id", "==", farmer_id)
     if ward_id:
         query = query.where("ward_id", "==", ward_id)
-    return [doc_to_dict(d) for d in query.stream()]
+    query = query.order_by("last_updated", direction="DESCENDING")
+    if start_after:
+        cursor_doc = db.collection(COLLECTION).document(start_after).get()
+        if cursor_doc.exists:
+            query = query.start_after(cursor_doc)
+    limit = min(limit, 200)
+    docs = query.limit(limit).stream()
+    items = [doc_to_dict(d) for d in docs]
+    next_cursor = items[-1]["id"] if len(items) == limit else None
+    return {"items": items, "next_cursor": next_cursor}
 
 
 @router.get("/{plot_id}", response_model=PlotOut)

@@ -1,6 +1,17 @@
 from datetime import datetime
 from typing import Optional, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+import phonenumbers
+
+
+def validate_e164(v: str) -> str:
+    try:
+        z = phonenumbers.parse(v, None)
+        if not phonenumbers.is_valid_number(z):
+            raise ValueError
+    except Exception:
+        raise ValueError("Phone number must be in E.164 format (e.g. +919876543210)")
+    return v
 
 
 # ---------- Districts ----------
@@ -62,6 +73,11 @@ class FarmerCreate(BaseModel):
     preferred_language: str = "hi"  # 'en','hi','te','ta','bn' etc.
     ward_id: str
 
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        return validate_e164(v)
+
 
 class FarmerUpdate(BaseModel):
     name: Optional[str] = None
@@ -119,8 +135,12 @@ class RecommendationOut(BaseModel):
 # ---------- Alerts ----------
 class AlertTriggerRequest(BaseModel):
     plot_id: str
-    alert_type: str = "dry_spell"  # dry_spell | irrigation | fertilization | general_advisory
-    force: bool = False  # bypass rule-engine threshold check (useful for live demo button)
+    alert_type: str = (
+        "dry_spell"  # dry_spell | irrigation | fertilization | general_advisory
+    )
+    force: bool = (
+        False  # bypass rule-engine threshold check (useful for live demo button)
+    )
 
 
 class AlertCreate(BaseModel):

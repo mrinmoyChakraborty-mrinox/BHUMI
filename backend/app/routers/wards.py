@@ -8,15 +8,27 @@ from app.auth import require_admin
 from app.services.weather_service import get_forecast_dry_days, WeatherServiceError
 
 router = APIRouter(prefix="/wards", tags=["Wards"])
-COLLECTION = "ward_data"  # mirrors 03_SCHEMA.md's `ward_data` table name
+COLLECTION = "ward_data"
 
 
-@router.get("", response_model=list[WardOut])
-def list_wards(district_id: str | None = None):
+@router.get("", response_model=dict)
+def list_wards(
+    district_id: str | None = None,
+    limit: int = 50,
+    start_after: str | None = None,
+):
     query = db.collection(COLLECTION)
     if district_id:
         query = query.where("district_id", "==", district_id)
-    return [doc_to_dict(d) for d in query.stream()]
+    if start_after:
+        cursor_doc = db.collection(COLLECTION).document(start_after).get()
+        if cursor_doc.exists:
+            query = query.start_after(cursor_doc)
+    limit = min(limit, 200)
+    docs = query.limit(limit).stream()
+    items = [doc_to_dict(d) for d in docs]
+    next_cursor = items[-1]["id"] if len(items) == limit else None
+    return {"items": items, "next_cursor": next_cursor}
 
 
 @router.get("/{ward_id}", response_model=WardOut)
@@ -24,18 +36,24 @@ def get_ward(ward_id: str):
     return get_or_404(db.collection(COLLECTION), ward_id, "Ward")
 
 
-@router.post("", response_model=WardOut, status_code=201, dependencies=[Depends(require_admin)])
+@router.post(
+    "", response_model=WardOut, status_code=201, dependencies=[Depends(require_admin)]
+)
 def create_ward(payload: WardCreate):
     ref = db.collection(COLLECTION).document(payload.ward_id)
     if ref.get().exists:
-        raise HTTPException(status_code=409, detail=f"Ward '{payload.ward_id}' already exists")
+        raise HTTPException(
+            status_code=409, detail=f"Ward '{payload.ward_id}' already exists"
+        )
     data = payload.model_dump(exclude={"ward_id"})
     data["updated_at"] = datetime.now(timezone.utc)
     ref.set(data)
     return doc_to_dict(ref.get())
 
 
-@router.patch("/{ward_id}", response_model=WardOut, dependencies=[Depends(require_admin)])
+@router.patch(
+    "/{ward_id}", response_model=WardOut, dependencies=[Depends(require_admin)]
+)
 def update_ward(ward_id: str, payload: WardUpdate):
     get_or_404(db.collection(COLLECTION), ward_id, "Ward")
     updates = clean_update(payload.model_dump())
@@ -53,9 +71,7 @@ def delete_ward(ward_id: str):
 
 @router.post("/{ward_id}/refresh-forecast", response_model=WardOut)
 def refresh_forecast(ward_id: str):
-    """Pulls a live dry-day forecast from OpenWeatherMap and updates ward_data.forecast_dry_days.
-    Per 08_REAL_DATA_GUNTUR.md this is the one field meant to be live rather than static —
-    wire this to a 'Refresh forecast' button on the dashboard, or a cron job in production."""
+    """Pulls a live dry-day forecast from OpenWeatherMap and updates ward_data.forecast_dry_days."""
     ward = get_or_404(db.collection(COLLECTION), ward_id, "Ward")
     lat, lon = ward.get("lat"), ward.get("lon")
     if lat is None or lon is None:

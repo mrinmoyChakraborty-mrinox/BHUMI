@@ -8,15 +8,24 @@ Calls the Gemini API directly (generativelanguage.googleapis.com), matching
 the JS example already in 06_PROMPTS.md — kept separate from any
 Anthropic/Claude usage elsewhere in the stack.
 """
+
 import base64
 import json
+import logging
 import re
 from typing import Optional
 
 import requests
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from app.config import get_settings
 
+logger = logging.getLogger("kisan-alert.gemini")
 settings = get_settings()
 
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -24,6 +33,18 @@ GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 class GeminiError(Exception):
     pass
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """Retry on timeouts, connectivity errors, and 5xx responses."""
+    if isinstance(exc, GeminiError):
+        # Check if the underlying cause was a 5xx
+        cause = exc.__cause__
+        if cause is not None and hasattr(cause, "response"):
+            status = cause.response.status_code
+            return status >= 500
+        return False
+    return isinstance(exc, (requests.ConnectionError, requests.Timeout))
 
 
 def _extract_text(response_json: dict) -> str:
@@ -37,13 +58,25 @@ def _extract_text(response_json: dict) -> str:
 
 def _parse_json_block(text: str) -> dict:
     """Gemini sometimes wraps JSON in ```json fences — strip them before parsing."""
-    cleaned = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
+    cleaned = re.sub(
+        r"^```(?:json)?|```$", "", text.strip(), flags=re.MULTILINE
+    ).strip()
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError as e:
         raise GeminiError(f"Could not parse Gemini JSON output: {cleaned}") from e
 
 
+@retry(
+    retry=retry_if_exception_type(
+        (GeminiError, requests.ConnectionError, requests.Timeout)
+    ),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    before_sleep=lambda retry_state: logger.warning(
+        "Gemini API call attempt %d failed, retrying...", retry_state.attempt_number
+    ),
+)
 def _call_gemini(contents: list[dict], use_search_grounding: bool = False) -> dict:
     if not settings.gemini_api_key:
         raise GeminiError("GEMINI_API_KEY is not set")
@@ -143,7 +176,9 @@ Respond with plain text only, no markdown."""
 
 
 # ---------- 3. Crop Health Diagnosis (Vision) ----------
-def diagnose_crop_photo(image_bytes: bytes, mime_type: str, language: str = "en") -> dict:
+def diagnose_crop_photo(
+    image_bytes: bytes, mime_type: str, language: str = "en"
+) -> dict:
     prompt = f"""SYSTEM:
 You are assisting a farmer with a crop health issue based on a photo.
 You are not a replacement for expert diagnosis — flag uncertainty honestly.

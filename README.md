@@ -134,16 +134,17 @@ Visit `http://localhost:8000/docs` for Swagger UI covering every endpoint.
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/recommend` | Crop recommendation (Gemini + source data) |
-| POST | `/alert/trigger` | Rule engine → Gemini advisory → Twilio call+SMS |
-| POST | `/twilio/voice-response` | DTMF keypress capture |
-| POST | `/twilio/sms-response` | Inbound SMS capture |
-| POST | `/health/log` | Upload photo → Gemini Vision diagnosis |
-| GET/POST | `/farmers`, `/plots` | Farmer & plot registration |
+| POST | `/alert/trigger` | 🔐 **Auth required** — Rule engine → Gemini → Twilio call+SMS (rate-limited, idempotent) |
+| POST | `/twilio/voice-response` | DTMF keypress capture (signature-validated) |
+| POST | `/twilio/sms-response` | Inbound SMS capture (signature-validated) |
+| POST | `/health/log` | Upload photo → Gemini Vision diagnosis (rate-limited, 8 MB max) |
+| GET/POST | `/farmers`, `/plots` | Farmer & plot registration (paginated, phone in E.164) |
 
 ### Dashboard (Firebase auth required)
 
 | Method | Path | Purpose |
 |---|---|---|
+| GET | `/dashboard/me` | Self-service whoami |
 | GET | `/dashboard/summary` | Stat strip counts |
 | GET | `/dashboard/farmers` | Farmer list + alert status |
 | GET | `/dashboard/alerts` | Alerts with ui_color (red/yellow/green) |
@@ -156,6 +157,7 @@ Visit `http://localhost:8000/docs` for Swagger UI covering every endpoint.
 |---|---|---|
 | CRUD | `/districts`, `/wards`, `/admin/officers` | Full management |
 | POST | `/wards/{ward_id}/refresh-forecast` | Live OpenWeatherMap update |
+| GET | `/farmers/{farmer_id}/timeline` | Merged alert + health + recommendation history |
 
 Full endpoint details in `backend/README.md`.
 

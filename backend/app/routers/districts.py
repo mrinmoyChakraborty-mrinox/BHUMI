@@ -10,10 +10,18 @@ router = APIRouter(prefix="/districts", tags=["Districts"])
 COLLECTION = "districts"
 
 
-@router.get("", response_model=list[DistrictOut])
-def list_districts():
-    docs = db.collection(COLLECTION).stream()
-    return [doc_to_dict(d) for d in docs]
+@router.get("", response_model=dict)
+def list_districts(limit: int = 50, start_after: str | None = None):
+    query = db.collection(COLLECTION)
+    if start_after:
+        cursor_doc = db.collection(COLLECTION).document(start_after).get()
+        if cursor_doc.exists:
+            query = query.start_after(cursor_doc)
+    limit = min(limit, 200)
+    docs = query.limit(limit).stream()
+    items = [doc_to_dict(d) for d in docs]
+    next_cursor = items[-1]["id"] if len(items) == limit else None
+    return {"items": items, "next_cursor": next_cursor}
 
 
 @router.get("/{district_id}", response_model=DistrictOut)
@@ -21,7 +29,12 @@ def get_district(district_id: str):
     return get_or_404(db.collection(COLLECTION), district_id, "District")
 
 
-@router.post("", response_model=DistrictOut, status_code=201, dependencies=[Depends(require_admin)])
+@router.post(
+    "",
+    response_model=DistrictOut,
+    status_code=201,
+    dependencies=[Depends(require_admin)],
+)
 def create_district(payload: DistrictCreate):
     data = payload.model_dump()
     data["created_at"] = datetime.now(timezone.utc)
@@ -30,7 +43,9 @@ def create_district(payload: DistrictCreate):
     return doc_to_dict(ref.get())
 
 
-@router.patch("/{district_id}", response_model=DistrictOut, dependencies=[Depends(require_admin)])
+@router.patch(
+    "/{district_id}", response_model=DistrictOut, dependencies=[Depends(require_admin)]
+)
 def update_district(district_id: str, payload: DistrictUpdate):
     get_or_404(db.collection(COLLECTION), district_id, "District")
     updates = clean_update(payload.model_dump())

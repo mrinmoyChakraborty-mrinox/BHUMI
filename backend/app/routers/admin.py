@@ -6,7 +6,9 @@ from app.firestore_utils import doc_to_dict, get_or_404, clean_update
 from app.schemas import OfficerCreate, OfficerUpdate, OfficerOut
 from app.auth import require_admin
 
-router = APIRouter(prefix="/admin", tags=["Admin"], dependencies=[Depends(require_admin)])
+router = APIRouter(
+    prefix="/admin", tags=["Admin"], dependencies=[Depends(require_admin)]
+)
 COLLECTION = "rsk_officers"
 
 
