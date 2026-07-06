@@ -98,7 +98,7 @@ BHUMI/
 | <img src="https://img.shields.io/badge/-AI%20Vision-8E75B2?logo=googlegemini&logoColor=white" height="20" alt="AI Vision"/> | Gemini Vision | Crop photo diagnosis |
 | <img src="https://img.shields.io/badge/-Grounding-8E75B2?logo=googlegemini&logoColor=white" height="20" alt="Grounding"/> | Gemini `googleSearch` tool | Live weather/advisory context |
 | <img src="https://img.shields.io/badge/-Voice%2FSMS-F22F46?logo=twilio&logoColor=white" height="20" alt="Voice/SMS"/> | Twilio | Outbound calls, DTMF gather, SMS fallback |
-| <img src="https://img.shields.io/badge/-Weather-E67E22?logo=openweathermap&logoColor=white" height="20" alt="Weather"/> | OpenWeatherMap | Dry-spell forecast (free tier) |
+| <img src="https://img.shields.io/badge/-Weather-E67E22?logo=openweathermap&logoColor=white" height="20" alt="Weather"/> | OpenWeatherMap /<br>IMD (via data.gov.in) | OpenWeatherMap used for hackathon speed (instant signup, free tier). For production, swap to IMD's official API (`api.imd.gov.in`) or IMD data proxied through `data.gov.in` — no architecture changes needed |
 | <img src="https://img.shields.io/badge/-Docs%20UI-646CFF?logo=vite&logoColor=white" height="20" alt="Docs UI"/> | Vite + TypeScript | Planning doc viewer |
 | <img src="https://img.shields.io/badge/-Dashboard-F7DF1E?logo=javascript&logoColor=black" height="20" alt="Dashboard"/> | Vanilla JS (planned) | No build step, lightweight |
 
@@ -164,7 +164,7 @@ Full endpoint details in `backend/README.md`.
 ## 📊 Data provenance
 
 - **Static, real**: soil type, avg rainfall — sourced from AP govt district portal + CGWB reports
-- **Live**: `forecast_dry_days` via OpenWeatherMap (free tier)
+- **Live**: `forecast_dry_days` via OpenWeatherMap (free tier). Alternative for production: **IMD API** (`api.imd.gov.in`) or IMD data through `data.gov.in` for India-specific forecasts — see `09_IMD_SOIL_CGWB_INTEGRATION.md` for integration options
 - **Simplified, labeled as such**: groundwater depth uses representative coastal-AP value (see `BWA/08_REAL_DATA_GUNTUR.md`)
 
 ---
