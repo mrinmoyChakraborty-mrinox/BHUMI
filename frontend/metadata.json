@@ -1,0 +1,6 @@
+{
+  "name": "AI Agriculture Assistant",
+  "description": "An AI-powered agricultural assistant for Indian farmers, providing crop recommendation, disease detection, weather alerts, government schemes, irrigation advice, and a multilingual voice-enabled chatbot.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
