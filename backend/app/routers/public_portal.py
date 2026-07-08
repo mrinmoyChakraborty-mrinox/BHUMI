@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, validator
 
 from app.config import get_settings
 from app.firebase_client import db
@@ -55,8 +55,7 @@ class DiseaseDetectionRequest(BaseModel):
     cropName: Optional[str] = None
     language: str = "en"
 
-    @field_validator("mimeType")
-    @classmethod
+    @validator("mimeType")
     def validate_mime(cls, v: str) -> str:
         if v not in ALLOWED_MIME_TYPES:
             raise ValueError(

@@ -1,6 +1,6 @@
 from datetime import datetime
-from typing import Optional, Any
-from pydantic import BaseModel, field_validator
+from typing import Dict, Optional, Any
+from pydantic import BaseModel, validator
 import phonenumbers
 
 
@@ -72,11 +72,10 @@ class FarmerCreate(BaseModel):
     phone: str
     preferred_language: str = "hi"
     ward_id: str = "general"
-    state: str | None = None
-    district: str | None = None
+    state: Optional[str] = None
+    district: Optional[str] = None
 
-    @field_validator("phone")
-    @classmethod
+    @validator("phone")
     def validate_phone(cls, v: str) -> str:
         return validate_e164(v)
 
@@ -132,7 +131,7 @@ class RecommendationOut(BaseModel):
     rationale: str
     confidence: str
     data_gaps: Optional[str] = None
-    source_data: dict[str, Any]
+    source_data: Dict[str, Any]
     created_at: Optional[datetime] = None
 
 

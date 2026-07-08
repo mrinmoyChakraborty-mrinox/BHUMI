@@ -262,6 +262,19 @@ docker build -t bhumi-backend .
 docker run -p 8000:8000 --env-file .env bhumi-backend
 ```
 
+## Deploy to Render (Python builder)
+
+1. Push the repo to GitHub
+2. Render dashboard → **New Web Service** → connect your repo
+3. Settings:
+   - **Runtime**: `Python` (native Python builder)
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - **Root Directory**: `backend` (if your repo has a monorepo structure)
+   - **Health Check Path**: `/healthz`
+4. Add all env vars from `.env.example` as **Environment Variables**
+   - Upload `firebase-service-account.json` as a **Secret File** → set `FIREBASE_SERVICE_ACCOUNT_PATH` to its Render path
+
 ## Security
 
 - **Twilio webhook signature validation** — every `/twilio/*` request verified against `X-Twilio-Signature` header; non-Twilio requests rejected with 403
