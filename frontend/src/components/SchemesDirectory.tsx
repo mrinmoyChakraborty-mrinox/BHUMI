@@ -100,12 +100,32 @@ export default function SchemesDirectory({ language }: SchemesDirectoryProps) {
       eligibility: "যোগ্যতার নির্দেশিকা",
       applyNow: "অফিসিয়াল রেজিস্ট্রেশন পোর্টাল",
       applyDemo: "এসএমএস নির্দেশিকা পাঠান",
+    },
+    te: {
+      title: "ప్రభుత్వ వ్యవసాయ పథకాలు",
+      sub: "కేంద్ర మరియు రాష్ట్ర సంక్షేమ కార్యక్రమాలను అన్వేషించండి, అర్హత తనిఖీ చేయండి మరియు నమోదు లింక్‌లతో కనెక్ట్ అవ్వండి",
+      searchPlaceholder: "PM-కిసాన్, KCC, పంట బీమా కోసం వెతకండి...",
+      eligTitle: "స్మార్ట్ సంక్షేమ అర్హత తనిఖీదారు",
+      eligSub: "సరిపోలే ప్రభుత్వ సహాయ పథకాలను పరీక్షించడానికి పారామితులను నమోదు చేయండి",
+      landSize: "మొత్తం వ్యవసాయ భూమి పరిమాణం (హెక్టార్లు)",
+      age: "రైతు వయస్సు (సంవత్సరాలు)",
+      taxpayer: "మీరు చురుకైన ఆదాయపు పన్ను చెల్లింపుదారులా?",
+      checkBtn: "పథకం అర్హతను మూల్యాంకనం చేయండి",
+      eligibleResult: "మీ వ్యక్తిగతీకరించిన అర్హత నివేదిక",
+      noLand: "అవును",
+      hasLand: "కాదు",
+      applySimSuccess: "దరఖాస్తు మార్గదర్శకాలతో SMS మీ నమోదిత ఫోన్ నంబర్‌కు పంపబడింది!",
+      ministry: "మంత్రిత్వ శాఖ / సంస్థ",
+      benefits: "అందించే ప్రయోజనాలు & సబ్సిడీలు",
+      eligibility: "అర్హత మార్గదర్శకాలు",
+      applyNow: "అధికారిక నమోదు పోర్టల్",
+      applyDemo: "SMS మార్గదర్శకాలను ప్రారంభించండి",
     }
   }[language];
 
   const filteredSchemes = GOVERNMENT_SCHEMES.filter(scheme => {
     const query = searchTerm.toLowerCase();
-    const localName = language === "en" ? scheme.name : scheme.nameLocal[language as "hi" | "bn"] || scheme.name;
+    const localName = language === "en" ? scheme.name : scheme.nameLocal[language as "hi" | "bn" | "te" | "te"] || scheme.name;
     return localName.toLowerCase().includes(query) || scheme.ministry.toLowerCase().includes(query);
   });
 
@@ -145,7 +165,7 @@ export default function SchemesDirectory({ language }: SchemesDirectoryProps) {
                       {scheme.tag}
                     </span>
                     <h4 className="text-lg font-display font-black text-stone-900 mt-2.5">
-                      {language === "en" ? scheme.name : scheme.nameLocal[language as "hi" | "bn"]}
+                      {language === "en" ? scheme.name : scheme.nameLocal[language as "hi" | "bn" | "te"]}
                     </h4>
                   </div>
                   <a 
@@ -164,11 +184,11 @@ export default function SchemesDirectory({ language }: SchemesDirectoryProps) {
                   </div>
                   <div>
                     <span className="font-bold text-stone-900 block mb-0.5 font-mono uppercase text-[10px] tracking-wider">{labels.benefits}</span>
-                    <span className="font-medium">{language === "en" ? scheme.benefits : scheme.benefitsLocal[language as "hi" | "bn"]}</span>
+                    <span className="font-medium">{language === "en" ? scheme.benefits : scheme.benefitsLocal[language as "hi" | "bn" | "te"]}</span>
                   </div>
                   <div>
                     <span className="font-bold text-stone-900 block mb-0.5 font-mono uppercase text-[10px] tracking-wider">{labels.eligibility}</span>
-                    <span className="font-medium">{language === "en" ? scheme.eligibility : scheme.eligibilityLocal[language as "hi" | "bn"]}</span>
+                    <span className="font-medium">{language === "en" ? scheme.eligibility : scheme.eligibilityLocal[language as "hi" | "bn" | "te"]}</span>
                   </div>
                 </div>
 
@@ -273,7 +293,7 @@ export default function SchemesDirectory({ language }: SchemesDirectoryProps) {
                         <span className="text-emerald-700 font-black shrink-0">✓</span>
                         <div>
                           <div className="font-bold text-stone-900">
-                            {language === "en" ? matched.name : matched.nameLocal[language as "hi" | "bn"]}
+                            {language === "en" ? matched.name : matched.nameLocal[language as "hi" | "bn" | "te"]}
                           </div>
                           <div className="text-stone-500 text-[10px] line-clamp-1 font-mono">{matched.tag} • {matched.ministry}</div>
                         </div>

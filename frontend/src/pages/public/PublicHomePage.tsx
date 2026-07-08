@@ -36,6 +36,12 @@ export default function PublicHomePage() {
       disease: "পাতার রোগ নির্ণয়", irrigation: "সেচের সময়সূচী",
       weather: "আবহাওয়া সতর্কতা", schemes: "সরকারী প্রকল্প",
       guide: "মেন্টর গাইড এবং পর্যালোচনা"
+    },
+    te: {
+      chat: "AI చాట్ & వాయిస్", recommendation: "నేల & పంట సూచన",
+      disease: "ఆకు వ్యాధి నిర్ధారణ", irrigation: "నీటి షెడ్యూల్",
+      weather: "వాతావరణ హెచ్చరికలు", schemes: "ప్రభుత్వ పథకాలు",
+      guide: "మెంటర్ గైడ్ & సమీక్షలు"
     }
   }[language];
 
@@ -43,7 +49,7 @@ export default function PublicHomePage() {
     <div>
       <div className="flex items-center gap-4 mb-4 flex-wrap">
         <div className="flex bg-white border-2 border-stone-900 p-1 rounded-xl shadow-[2px_2px_0px_0px_rgba(28,25,23,1)]">
-          {(["en", "hi", "bn"] as Language[]).map((lang) => (
+          {(["en", "hi", "bn", "te"] as Language[]).map((lang) => (
             <button
               key={lang}
               onClick={() => setLanguage(lang)}
@@ -51,7 +57,7 @@ export default function PublicHomePage() {
                 language === lang ? "bg-emerald-600 text-white" : "text-stone-500 hover:text-stone-900"
               }`}
             >
-              {lang === "en" ? "EN" : lang === "hi" ? "हिन्दी" : "বাংলা"}
+              {lang === "en" ? "EN" : lang === "hi" ? "हिन्दी" : lang === "bn" ? "বাংলা" : "తెలుగు"}
             </button>
           ))}
         </div>

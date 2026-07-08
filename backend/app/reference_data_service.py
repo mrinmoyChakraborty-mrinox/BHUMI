@@ -161,19 +161,19 @@ def delete_district(district_id: str) -> None:
 # ── Ward Reference Data Sync ─────────────────────────────────────────────
 def get_ward_defaults(district_id: str) -> dict:
     """Reads static/quarterly reference fields from Postgres (soil_type,
-    avg_rainfall_mm, groundwater_depth_m) for a given district.
+    avg_rainfall_mm, groundwater_depth_m, source_notes) for a given district.
 
-    The actual query depends on the reference table schema once loaded.
     Returns defaults that can be written into a Firestore ward_data doc.
+    district_id here maps to lgd_districts.district_code.
     """
     try:
         with _get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cur.execute(
                 """SELECT soil_type, avg_rainfall_mm, groundwater_depth_m,
-                          lat, lon
+                          source_notes
                    FROM ward_reference_data
-                   WHERE district_id = %s
+                   WHERE district_code = %s
                    LIMIT 1""",
                 (district_id,),
             )
@@ -226,6 +226,51 @@ def sync_ward_defaults_to_firestore(ward_id: str, district_id: str) -> dict:
     from app.firestore_utils import doc_to_dict
 
     return doc_to_dict(db.collection("ward_data").document(ward_id).get())
+
+
+def bulk_sync_ward_defaults_to_firestore() -> dict:
+    """Sync ALL ward_data docs from Postgres ward_reference_data.
+    Only overwrites null fields in existing ward docs.
+    Returns a summary of synced vs skipped wards."""
+    from app.firebase_client import db
+
+    # Read all reference data
+    with _get_conn() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("""
+            SELECT district_code, soil_type, avg_rainfall_mm, groundwater_depth_m
+            FROM ward_reference_data
+        """)
+        ref_rows = {r["district_code"]: r for r in cur.fetchall()}
+
+    if not ref_rows:
+        raise ReferenceDataError("No rows in ward_reference_data — nothing to sync")
+
+    wards = db.collection("ward_data").stream()
+    synced = 0
+    skipped = 0
+    for ward in wards:
+        ward_data = ward.to_dict() or {}
+        district_id = ward_data.get("district_id")
+        if not district_id or district_id not in ref_rows:
+            skipped += 1
+            continue
+
+        ref = ref_rows[district_id]
+        updates = {}
+        for field in ("soil_type", "avg_rainfall_mm", "groundwater_depth_m"):
+            if ward_data.get(field) is None and ref.get(field) is not None:
+                updates[field] = ref[field]
+
+        if updates:
+            updates["updated_at"] = datetime.now(timezone.utc)
+            db.collection("ward_data").document(ward.id).update(updates)
+            synced += 1
+        else:
+            skipped += 1
+
+    logger.info("Bulk sync: %d wards updated, %d skipped", synced, skipped)
+    return {"synced": synced, "skipped": skipped}
 
 
 # ── Internal helpers ─────────────────────────────────────────────────────

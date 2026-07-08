@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     env: str = "development"
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     admin_bootstrap_uids: str = ""
+    # When True, trust X-Forwarded-For / X-Real-IP headers for client IP
+    # (rate limiting, logging). Only enable behind a trusted reverse proxy.
+    trust_proxy: bool = False
 
     # Google Maps
     google_maps_api_key: str = ""

@@ -15,7 +15,24 @@ settings = get_settings()
 _twilio_validator: Optional[RequestValidator] = None
 
 # Global rate limiter — wired into main.py via add_middleware
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_client_ip)
+
+
+def get_client_ip(request: Request) -> str:
+    """Client IP for rate limiting.
+
+    Behind a trusted reverse proxy (env TRUST_PROXY=true) we honour the
+    leftmost X-Forwarded-For / X-Real-IP hop; otherwise we fall back to the
+    direct peer address so a client cannot spoof the limiter key.
+    """
+    if settings.trust_proxy:
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            return real_ip.strip()
+    return get_remote_address(request)
 
 
 def get_twilio_validator() -> RequestValidator:

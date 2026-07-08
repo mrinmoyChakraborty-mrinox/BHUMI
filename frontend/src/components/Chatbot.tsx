@@ -81,7 +81,7 @@ export default function Chatbot({ language }: ChatbotProps) {
       const rec = new SpeechRecognition();
       rec.continuous = false;
       rec.interimResults = false;
-      rec.lang = language === "hi" ? "hi-IN" : language === "bn" ? "bn-IN" : "en-IN";
+      rec.lang = language === "hi" ? "hi-IN" : language === "bn" ? "bn-IN" : language === "te" ? "te-IN" : "en-IN";
       rec.onstart = () => setIsListening(true);
       rec.onresult = (e: any) => {
         const transcript = e.results[0][0].transcript;
@@ -102,6 +102,7 @@ export default function Chatbot({ language }: ChatbotProps) {
       en: "Namaste! I am your Krishi AI Assistant. How can I help you with your crop cycle, soil health, weather, or government schemes today?",
       hi: "नमस्ते! मैं आपका कृषि एआई सहायक हूँ। आज मैं आपकी फसल चक्र, मिट्टी के स्वास्थ्य, मौसम या सरकारी योजनाओं में किस प्रकार मदद कर सकता हूँ?",
       bn: "নমস্কার! আমি আপনার কৃষি এআই সহকারী। আজ আমি আপনার ফসল চক্র, মাটির স্বাস্থ্য, আবহাওয়া বা সরকারী প্রকল্পগুলিতে কীভাবে সহায়তা করতে পারি?",
+      te: "నమస్కారం! నేను మీ కృషి AI అసిస్టెంట్. మీ పంట చక్రం, నేల ఆరోగ్యం, వాతావరణం లేదా ప్రభుత్వ పథకాల గురించి నేను ఎలా సహాయపడగలను?",
     };
     setMessages([{
       id: "greet",
@@ -134,7 +135,7 @@ export default function Chatbot({ language }: ChatbotProps) {
       message: text,
       history: historyPayload,
       language,
-      location: "Nadia, West Bengal",
+      location: "Guntur, Andhra Pradesh",
     }));
   }, [input, messages, language]);
 
@@ -160,7 +161,7 @@ export default function Chatbot({ language }: ChatbotProps) {
     }
     const cleanText = text.replace(/[*#`_\-]/g, "");
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = language === "hi" ? "hi-IN" : language === "bn" ? "bn-IN" : "en-IN";
+    utterance.lang = language === "hi" ? "hi-IN" : language === "bn" ? "bn-IN" : language === "te" ? "te-IN" : "en-IN";
     utterance.rate = 0.95;
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
@@ -203,6 +204,17 @@ export default function Chatbot({ language }: ChatbotProps) {
       s1: "ধানের জন্য সেরা সার সুপারিশ করুন",
       s2: "পিএম কিষাণ কিস্তির যোগ্যতা",
       s3: "পাতার মরিচা রোগের জৈব প্রতিকার",
+    },
+    te: {
+      inputPlaceholder: "పంటలు, విత్తనాలు, తెగుళ్ళు లేదా పథకాల గురించి అడగండి...",
+      speakBtn: "మాట్లాడండి",
+      muteBtn: "వాయిస్ ఆపండి",
+      voiceActive: "వాయిస్ యాక్టివ్",
+      voiceMute: "స్వయంచాలకంగా చదవండి",
+      suggestionHeader: "తరచుగా అడిగే ప్రశ్నలు",
+      s1: "వరికి ఉత్తమ ఎరువును సూచించండి",
+      s2: "PM కిసాన్ వాయిదా అర్హత",
+      s3: "ఆకు తుప్పు తెగులు నివారణ",
     },
   }[language];
 

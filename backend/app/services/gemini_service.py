@@ -315,6 +315,8 @@ def get_chatbot_response(
         lang_instruction = "IMPORTANT: Respond entirely in Hindi (हिन्दी). Use simple, conversational words."
     elif language == "bn":
         lang_instruction = "IMPORTANT: Respond entirely in Bengali (বাংলা). Use simple, conversational words."
+    elif language == "te":
+        lang_instruction = "IMPORTANT: Respond entirely in Telugu (తెలుగు). Use simple, conversational words."
 
     system = f"""SYSTEM:
 You are "Krishi AI Assistant", a friendly, empathetic, and knowledgeable agricultural chatbot for Indian farmers.
