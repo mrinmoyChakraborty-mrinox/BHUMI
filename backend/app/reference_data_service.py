@@ -10,14 +10,24 @@ import logging
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
-import psycopg2
-import psycopg2.extras
-from psycopg2 import sql
-
 from app.config import get_settings
 
 logger = logging.getLogger("kisan-alert.reference-data")
 settings = get_settings()
+
+# psycopg2 may not have a pre-built wheel for the active Python runtime
+# (e.g. Python≥3.14).  We import optionally so the app can start up without
+# Postgres — callers get ReferenceDataError when they actually touch the DB.
+try:
+    import psycopg2
+    import psycopg2.extras  # noqa: F401
+    from psycopg2 import sql
+
+    _HAS_PSYCOPG2 = True
+except ImportError:
+    psycopg2 = None  # type: ignore[assignment]
+    sql = None
+    _HAS_PSYCOPG2 = False
 
 
 class ReferenceDataError(Exception):
@@ -30,6 +40,11 @@ def _get_conn():
     if not settings.database_url:
         raise ReferenceDataError(
             "DATABASE_URL is not set — cannot query reference data"
+        )
+    if not _HAS_PSYCOPG2:
+        raise ReferenceDataError(
+            "psycopg2 is not installed or the installed version is not "
+            "compatible with this Python runtime — cannot query reference data"
         )
     conn = psycopg2.connect(settings.database_url, sslmode="require")
     try:

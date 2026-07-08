@@ -275,6 +275,8 @@ docker run -p 8000:8000 --env-file .env bhumi-backend
 4. Add all env vars from `.env.example` as **Environment Variables**
    - Upload `firebase-service-account.json` as a **Secret File** → set `FIREBASE_SERVICE_ACCOUNT_PATH` to its Render path
 
+> ⚠️ Postgres reference data (districts, ward sync): if you need `DATABASE_URL`, uncomment `psycopg2-binary` in `requirements.txt` and ensure your Python runtime has a matching wheel. The app starts fine without it — Postgres endpoints will return a 502 error until it's configured.
+
 ## Security
 
 - **Twilio webhook signature validation** — every `/twilio/*` request verified against `X-Twilio-Signature` header; non-Twilio requests rejected with 403
