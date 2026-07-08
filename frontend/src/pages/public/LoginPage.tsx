@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type FormEvent } from "react";
-import { useNavigate, Navigate, Link } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -14,8 +14,8 @@ import type { FarmerOut, PlotCreate, PlotOut } from "../../api/types";
 import { API_BASE_URL } from "../../config/env";
 import {
   Sprout, Loader2, Mail, Lock, Phone, Smartphone,
-  User, Globe, AlertCircle, ArrowRight, CheckCircle,
-  MessageSquare, Languages,
+  User, Globe, AlertCircle, CheckCircle,
+  MessageSquare,
 } from "lucide-react";
 import type { Language } from "../../types";
 
@@ -310,7 +310,6 @@ function getErrorMessage(err: unknown, t: typeof T.en): string {
 
 export default function LoginPage() {
   const { user, loading: authLoading, loginRedirect, setLoginRedirect, setFarmerProfile } = useAuthContext();
-  const navigate = useNavigate();
   const recaptchaRef = useRef<HTMLDivElement>(null);
   const [lang, setLang] = useState<Language>("en");
   const t = T[lang];
@@ -344,6 +343,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [recaptchaReady, setRecaptchaReady] = useState(false);
+  const [redirectTo, setRedirectTo] = useState<string | null>(null);
 
   useEffect(() => {
     if (!auth) return;
@@ -358,6 +358,16 @@ export default function LoginPage() {
     }
   }, []);
 
+  // Redirect once if already logged in and no auth flow is in progress
+  const hasPendingAuthFlow = submitting || otpSent || confirmationResult !== null || regPhone !== "";
+  useEffect(() => {
+    if (user && !hasPendingAuthFlow && !authLoading) {
+      setRedirectTo(loginRedirect || "/app");
+      setLoginRedirect(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!user, authLoading]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-stone-50 to-emerald-50">
@@ -366,10 +376,8 @@ export default function LoginPage() {
     );
   }
 
-  if (user) {
-    const redirect = loginRedirect || "/app";
-    setLoginRedirect(null);
-    return <Navigate to={redirect} replace />;
+  if (redirectTo) {
+    return <Navigate to={redirectTo} replace />;
   }
 
   const handlePhoneOtp = async () => {
@@ -405,7 +413,7 @@ export default function LoginPage() {
         const profile: FarmerOut = await res.json();
         if (profile) {
           setFarmerProfile(profile);
-          navigate("/app");
+          setRedirectTo("/app");
           return;
         }
       }
@@ -427,7 +435,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, emailLogin, passwordLogin);
-      navigate("/dashboard");
+      setRedirectTo("/dashboard");
     } catch (err: unknown) {
       setError(getErrorMessage(err, t));
     } finally {
@@ -484,7 +492,7 @@ export default function LoginPage() {
       }
 
       setFarmerProfile(farmer);
-      navigate("/app");
+      setRedirectTo("/app");
     } catch (err: unknown) {
       setError(getErrorMessage(err, t));
     } finally {
@@ -501,8 +509,8 @@ export default function LoginPage() {
       <div className="w-full max-w-4xl bg-white border-2 border-emerald-700 rounded-3xl shadow-[8px_8px_0px_0px_rgba(4,120,87,1)] overflow-hidden grid md:grid-cols-[1fr_1.2fr]">
         {/* ── Hero panel ────────────────────────────────────────── */}
         <div
-          className="relative bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-700 p-8 md:p-10 flex flex-col text-white overflow-hidden"
-          style={{ minHeight: 320 }}
+          className="relative bg-gradient-to-br from-emerald-700/92 via-emerald-600/92 to-teal-700/92 p-8 md:p-10 flex flex-col text-white overflow-hidden bg-cover bg-center"
+          style={{ minHeight: 320, backgroundImage: "url(/login-bg.png)" }}
         >
           {/* Decorative blobs */}
           <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />

@@ -1,48 +1,38 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/BHUMI-Bharat's%20Harvest%20Understanding%20%26%20Monitoring%20Intelligence-2d7d46?style=for-the-badge&labelColor=1a4d2e" alt="BHUMI" />
+  <img src="https://img.shields.io/badge/BHUMI-AgriTech-2d7d46?style=for-the-badge&labelColor=1a4d2e" alt="BHUMI" />
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi" alt="FastAPI" />
   <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase" />
   <img src="https://img.shields.io/badge/Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Gemini" />
   <img src="https://img.shields.io/badge/Twilio-F22F46?style=for-the-badge&logo=twilio&logoColor=white" alt="Twilio" />
-  <img src="https://img.shields.io/badge/OpenWeatherMap-E67E22?style=for-the-badge&logo=openweathermap&logoColor=white" alt="OpenWeatherMap" />
-  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
-  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
 </p>
 
-<h1 align="center">BHUMI — Kisan Alert</h1>
+<h1 align="center">BHUMI — Krishi AI Portal</h1>
 <h3 align="center">Bharat's Harvest Understanding & Monitoring Intelligence</h3>
-<h4 align="center">Voice-first agricultural intelligence for small and marginal farmers.</h4>
+<h4 align="center">AI-powered agricultural platform for Indian farmers — crop advice, disease detection, weather alerts & government schemes</h4>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Status-Prototype-2d7d46?style=flat-square" alt="Status: Prototype" />
+  <img src="https://img.shields.io/badge/Status-Production-2d7d46?style=flat-square" alt="Status: Production" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License: MIT" />
-  <img src="https://img.shields.io/badge/Build-24--48h%20Hackathon-ff6b35?style=flat-square" alt="Build: 24-48hr Hackathon" />
 </p>
 
 <br>
 
-BHUMI is a hackathon-built platform that recommends crops, sends voice/SMS dry-spell alerts, and diagnoses crop health via photo — all in the farmer's language, on a basic phone, with no data connection required.
-
-Built in 24–48 hours. Extensible from **1 ward to a full district** with no schema changes.
-
----
-
-## 🌱 Problem
-
-Small farmers make crop decisions based on habit or hearsay rather than soil health, groundwater depth, or rainfall data — leading to crop failure and financial loss. Existing digital tools assume literacy, smartphones, and data connectivity that most small farmers don't have.
-
-## 🚜 Solution
-
-BHUMI calls the farmer, speaks their language, and tells them exactly what to do:
-
-1. 🌾 **Crop recommendation** — grounded in real soil, rainfall, and groundwater data (not a black box)
-2. 📞 **Dry-spell alerts** — outbound voice call + SMS with DTMF response (press 1 for irrigated, 2 for callback)
-3. 📷 **Crop health diagnosis** — upload a photo, get an AI diagnosis in seconds, flagged for RSK follow-up
-4. 📊 **RSK Dashboard** — ward officer view of all farmers, alerts, and flagged cases
+BHUMI is a full-stack agri-advisory platform serving Indian farmers with:
+- **AI Chat & Voice Assistant** (4 languages: EN/HI/BN/TE)
+- **Crop Recommendation** powered by Gemini + soil/rainfall data
+- **Leaf Disease Diagnosis** via Gemini Vision
+- **Irrigation Scheduling** for personalized water management
+- **Real-time Weather Alerts** through OpenWeatherMap
+- **Government Scheme Discovery** (PM-KISAN, PMFBY, KCC, etc.)
+- **Phone OTP Login & Farmer Account** with Firebase Auth + Firestore profiles
 
 ---
 
@@ -50,24 +40,28 @@ BHUMI calls the farmer, speaks their language, and tells them exactly what to do
 
 ```
 BHUMI/
-├── README.md                  ← You are here
-├── frontend/
-│   ├── README.md              Docs Viewer + RSK Dashboard
-│   ├── index.html             Vite-based doc viewer
-│   ├── src/main.ts            Static doc viewer app
-│   └── public/md/             Documentation markdown files
-├── backend/
-│   ├── README.md              Full backend setup & API reference
+├── frontend/                     # React + TypeScript + Tailwind (Vite)
+│   ├── src/
+│   │   ├── pages/public/         Landing page, login, public portal
+│   │   ├── pages/dashboard/      RSK officer dashboard
+│   │   ├── pages/admin/          Admin panel
+│   │   ├── components/           Chatbot, CropRecommendation, DiseaseDetection, etc.
+│   │   ├── auth/                 Firebase Auth + AuthContext
+│   │   ├── api/                  API client + types
+│   │   └── config/               Env variables
+│   ├── public/                   Static assets (favicon, login-bg)
+│   └── index.html
+├── backend/                      # Python + FastAPI
 │   ├── app/
-│   │   ├── main.py            FastAPI app entry point
-│   │   ├── config.py          Env var settings (pydantic-settings)
-│   │   ├── firebase_client.py Firebase Admin SDK init
-│   │   ├── schemas.py          Pydantic request/response models
-│   │   ├── services/           Gemini, Twilio, weather, rule engine
-│   │   └── routers/            13 route modules (recommend, alerts, dashboard, etc.)
-│   ├── scripts/seed_data.py   Real Guntur district data seeder
-│   └── firestore.rules        Locks down direct client Firestore access
-├── .env.example               Env var template
+│   │   ├── main.py               FastAPI entry, security headers, health check
+│   │   ├── config.py             Pydantic settings
+│   │   ├── schemas.py            Request/response models (farmers, plots, alerts…)
+│   │   ├── firebase_client.py    Firebase Admin SDK
+│   │   ├── auth.py               Firebase token verification
+│   │   ├── routers/              farmers, plots, alerts, dashboard, admin, public_portal…
+│   │   └── services/             Gemini, Twilio, weather, rule engine
+│   ├── scripts/seed_data.py      Guntur district data seeder
+│   └── Dockerfile                Production container
 ├── .gitignore
 └── requirements.txt
 ```
@@ -76,54 +70,66 @@ BHUMI/
 
 ## 🧰 Stack
 
-<p align="center">
-  <img src="https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase" />
-  <img src="https://img.shields.io/badge/Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Gemini" />
-  <img src="https://img.shields.io/badge/Twilio-F22F46?style=for-the-badge&logo=twilio&logoColor=white" alt="Twilio" />
-  <img src="https://img.shields.io/badge/OpenWeatherMap-E67E22?style=for-the-badge&logo=openweathermap&logoColor=white" alt="OpenWeatherMap" />
-  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
-  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
-  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Vanilla%20JS-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="Vanilla JS" />
-</p>
-
 | Layer | Choice | Why |
 |---|---|---|
-| <img src="https://img.shields.io/badge/-API-005571?logo=fastapi&logoColor=white" height="20" alt="API"/> | FastAPI | Fast to build, familiar stack |
-| <img src="https://img.shields.io/badge/-Database-FFCA28?logo=firebase&logoColor=black" height="20" alt="DB"/> | Cloud Firestore (Firebase) | Replaces Supabase from original spec; collections mirror `03_SCHEMA.md` 1:1 |
-| <img src="https://img.shields.io/badge/-Storage-FFCA28?logo=firebase&logoColor=black" height="20" alt="Storage"/> | Firebase Storage | Crop health photos |
-| <img src="https://img.shields.io/badge/-Auth-FFCA28?logo=firebase&logoColor=black" height="20" alt="Auth"/> | Firebase Authentication | RSK officer / admin dashboard login |
-| <img src="https://img.shields.io/badge/-AI%20Text-8E75B2?logo=googlegemini&logoColor=white" height="20" alt="AI Text"/> | Gemini API | Free tier, no GCP billing needed |
-| <img src="https://img.shields.io/badge/-AI%20Vision-8E75B2?logo=googlegemini&logoColor=white" height="20" alt="AI Vision"/> | Gemini Vision | Crop photo diagnosis |
-| <img src="https://img.shields.io/badge/-Grounding-8E75B2?logo=googlegemini&logoColor=white" height="20" alt="Grounding"/> | Gemini `googleSearch` tool | Live weather/advisory context |
-| <img src="https://img.shields.io/badge/-Voice%2FSMS-F22F46?logo=twilio&logoColor=white" height="20" alt="Voice/SMS"/> | Twilio | Outbound calls, DTMF gather, SMS fallback |
-| <img src="https://img.shields.io/badge/-Weather-E67E22?logo=openweathermap&logoColor=white" height="20" alt="Weather"/> | OpenWeatherMap /<br>IMD (via data.gov.in) | OpenWeatherMap used for hackathon speed (instant signup, free tier). For production, swap to IMD's official API (`api.imd.gov.in`) or IMD data proxied through `data.gov.in` — no architecture changes needed |
-| <img src="https://img.shields.io/badge/-Docs%20UI-646CFF?logo=vite&logoColor=white" height="20" alt="Docs UI"/> | Vite + TypeScript | Planning doc viewer |
-| <img src="https://img.shields.io/badge/-Dashboard-F7DF1E?logo=javascript&logoColor=black" height="20" alt="Dashboard"/> | Vanilla JS (planned) | No build step, lightweight |
+| **Frontend** | React 19 + TypeScript + Tailwind CSS | Fast, type-safe, utility-first styling |
+| **Backend** | Python 3.12 + FastAPI | Async-first, auto-docs, Pydantic validation |
+| **Database** | Cloud Firestore (Firebase) | Real-time, serverless, collections for farmers/plots/alerts/health-logs |
+| **Auth** | Firebase Auth (Email/Password + Phone OTP) | RSK officer + farmer authentication |
+| **AI** | Google Gemini API (gemini-2.0-flash) | Free tier, text + vision + search grounding |
+| **Voice/SMS** | Twilio | Outbound calls with DTMF, SMS fallback |
+| **Weather** | OpenWeatherMap | Free tier, real-time forecasts |
+| **Geocoding** | Google Maps API | District → lat/lon lookup |
+| **Build** | Vite | Fast HMR, TypeScript out of the box |
 
 ---
 
 ## ⚡ Quick start
 
+### Prerequisites
+- Python 3.12+
+- Node.js 20+
+- Firebase project (Firestore + Auth + Storage)
+- Gemini API key (free from Google AI Studio)
+- Twilio account (for voice/SMS features)
+- OpenWeatherMap API key (free tier)
+
+### Backend
+
 ```bash
-# Backend
-cp .env.example .env          # Fill in Firebase, Gemini, Twilio, OpenWeatherMap keys
+cd backend
+cp .env.example .env                    # Fill in your API keys
 python -m venv venv
-source venv/bin/activate       # Windows: venv\Scripts\activate
+venv\Scripts\activate                   # Windows: .\venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
-# Seed real Guntur district data
+# Seed demo data
 python -m scripts.seed_data
-
-# Frontend (docs viewer)
-cd frontend
-npm install
-npm run dev                    # → http://localhost:5173
 ```
 
-Visit `http://localhost:8000/docs` for Swagger UI covering every endpoint.
+### Frontend
+
+```bash
+cd frontend
+cp .env.example .env                    # Set VITE_API_BASE_URL, Firebase keys
+npm install
+npm run dev                              # → http://localhost:5173
+```
+
+Visit `http://localhost:8000/docs` for auto-generated Swagger UI.
+
+---
+
+## 🧭 Routes
+
+| Path | Description |
+|---|---|
+| `/` | Landing page with hero, feature cards, language selector |
+| `/app` | Krishi AI Portal (Chat, Crop, Disease, Irrigation, Weather, Schemes) |
+| `/login` | Farmer login (phone OTP) + RSK officer login (email/password) |
+| `/dashboard` | RSK officer dashboard (requires Firebase Auth) |
+| `/admin` | Admin panel (requires admin claim) |
 
 ---
 
