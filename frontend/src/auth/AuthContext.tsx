@@ -10,18 +10,22 @@ import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { auth } from "./firebase";
 import { setTokenGetter } from "../api/client";
 import { apiRequest } from "../api/client";
-import type { DashboardMeResponse } from "../api/types";
+import type { DashboardMeResponse, FarmerOut } from "../api/types";
+import { API_BASE_URL } from "../config/env";
 
-export type UserRole = "rsk_officer" | "admin" | null;
+export type UserRole = "rsk_officer" | "admin" | "farmer" | null;
 
 interface AuthState {
   user: User | null;
   idToken: string | null;
   role: UserRole;
   officerName: string | null;
+  farmerId: string | null;
+  farmerProfile: FarmerOut | null;
   loading: boolean;
   loginRedirect: string | null;
   setLoginRedirect: (path: string | null) => void;
+  setFarmerProfile: (profile: FarmerOut | null) => void;
   logout: () => Promise<void>;
 }
 
@@ -32,20 +36,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [idToken, setIdToken] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole>(null);
   const [officerName, setOfficerName] = useState<string | null>(null);
+  const [farmerId, setFarmerId] = useState<string | null>(null);
+  const [farmerProfile, setFarmerProfile] = useState<FarmerOut | null>(null);
   const [loading, setLoading] = useState(true);
   const [loginRedirect, setLoginRedirect] = useState<string | null>(null);
 
-  const fetchRole = useCallback(async (token: string) => {
+  const fetchRole = useCallback(async (token: string): Promise<UserRole> => {
     try {
       const me = await apiRequest<DashboardMeResponse>("/dashboard/me", {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       });
-      setRole((me.role as UserRole) || null);
+      const r = (me.role as UserRole) || null;
+      setRole(r);
       setOfficerName(me.name || null);
+      return r;
     } catch {
       setRole(null);
       setOfficerName(null);
+      return null;
     }
   }, []);
 
@@ -70,11 +79,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (firebaseUser) {
         const token = await firebaseUser.getIdToken();
         setIdToken(token);
-        await fetchRole(token);
+        const detectedRole = await fetchRole(token);
+        if (!detectedRole && firebaseUser.phoneNumber) {
+          try {
+            const phone = encodeURIComponent(firebaseUser.phoneNumber);
+            const res = await fetch(`${API_BASE_URL}/farmers/by-phone/${phone}`);
+            if (res.ok) {
+              const profile: FarmerOut = await res.json();
+              if (profile) {
+                setFarmerId(profile.id);
+                setFarmerProfile(profile);
+                setRole("farmer");
+              }
+            }
+          } catch {
+            // phone lookup failed — user remains anonymous
+          }
+        }
       } else {
         setIdToken(null);
         setRole(null);
         setOfficerName(null);
+        setFarmerId(null);
+        setFarmerProfile(null);
       }
       setLoading(false);
     });
@@ -83,6 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     if (auth) await signOut(auth);
+    setFarmerId(null);
+    setFarmerProfile(null);
   }, []);
 
   return (
@@ -92,9 +121,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         idToken,
         role,
         officerName,
+        farmerId,
+        farmerProfile,
         loading,
         loginRedirect,
         setLoginRedirect,
+        setFarmerProfile,
         logout,
       }}
     >

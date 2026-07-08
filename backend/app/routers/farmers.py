@@ -31,6 +31,12 @@ def list_farmers(
     return {"items": items, "next_cursor": next_cursor}
 
 
+@router.get("/by-phone/{phone}", response_model=FarmerOut | None)
+def get_farmer_by_phone(phone: str):
+    docs = list(db.collection(COLLECTION).where("phone", "==", phone).limit(1).stream())
+    return doc_to_dict(docs[0]) if docs else None
+
+
 @router.get("/{farmer_id}", response_model=FarmerOut)
 def get_farmer(farmer_id: str):
     return get_or_404(db.collection(COLLECTION), farmer_id, "Farmer")

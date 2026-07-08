@@ -70,8 +70,10 @@ class WardOut(BaseModel):
 class FarmerCreate(BaseModel):
     name: str
     phone: str
-    preferred_language: str = "hi"  # 'en','hi','te','ta','bn' etc.
-    ward_id: str
+    preferred_language: str = "hi"
+    ward_id: str = "general"
+    state: str | None = None
+    district: str | None = None
 
     @field_validator("phone")
     @classmethod
@@ -84,6 +86,8 @@ class FarmerUpdate(BaseModel):
     phone: Optional[str] = None
     preferred_language: Optional[str] = None
     ward_id: Optional[str] = None
+    state: Optional[str] = None
+    district: Optional[str] = None
 
 
 class FarmerOut(FarmerCreate):

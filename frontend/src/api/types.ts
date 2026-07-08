@@ -61,6 +61,8 @@ export interface FarmerCreate {
   phone: string;
   preferred_language?: Language;
   ward_id: string;
+  state?: string;
+  district?: string;
 }
 
 export type Language = "en" | "hi" | "bn" | "te";
@@ -70,6 +72,8 @@ export interface FarmerUpdate {
   phone?: string;
   preferred_language?: string;
   ward_id?: string;
+  state?: string;
+  district?: string;
 }
 
 export interface FarmerOut {
@@ -78,6 +82,8 @@ export interface FarmerOut {
   phone: string;
   preferred_language: string;
   ward_id: string;
+  state?: string | null;
+  district?: string | null;
   created_at?: string | null;
 }
 

@@ -28,5 +28,9 @@ export default function ProtectedRoute({ requiredRole = "any", children }: Props
     return <Navigate to="/unauthorized" replace />;
   }
 
+  if (requiredRole === "any" && role === "farmer") {
+    return <Navigate to="/app" replace />;
+  }
+
   return <>{children}</>;
 }
