@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Info, Sparkles, Loader2, HelpCircle, ClipboardCheck } from "lucide-react";
+import { cropRecommendation } from "../api/endpoints/publicPortal";
 import { Language } from "../types";
 
 interface CropRecommendationProps {
@@ -7,7 +8,6 @@ interface CropRecommendationProps {
 }
 
 export default function CropRecommendation({ language }: CropRecommendationProps) {
-  // Form values
   const [n, setN] = useState(80);
   const [p, setP] = useState(40);
   const [k, setK] = useState(40);
@@ -16,7 +16,6 @@ export default function CropRecommendation({ language }: CropRecommendationProps
   const [temperature, setTemperature] = useState(26);
   const [rainfall, setRainfall] = useState(1200);
   const [state, setState] = useState("Punjab");
-  
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
@@ -91,23 +90,18 @@ export default function CropRecommendation({ language }: CropRecommendationProps
     }
   }[language];
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await fetch("/api/crop-recommendation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ n, p, k, soilType, ph, temperature, rainfall, state, language }),
+      const data = await cropRecommendation({
+        n, p, k, soilType, ph, temperature, rainfall, state, language,
       });
-      const data = await response.json();
       if (data.success) {
         setResult(data.recommendation);
-      } else {
-        alert(data.error || "Failed to recommend crops");
       }
-    } catch (err: any) {
-      alert("Error: " + err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to recommend crops");
     } finally {
       setLoading(false);
     }

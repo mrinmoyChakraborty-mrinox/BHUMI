@@ -10,3 +10,4 @@ twilio==9.3.2
 slowapi==0.1.10
 phonenumbers==8.13.39
 tenacity==9.1.4
+psycopg2-binary==2.9.9

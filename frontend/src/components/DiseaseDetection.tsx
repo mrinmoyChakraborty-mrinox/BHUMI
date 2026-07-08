@@ -1,5 +1,6 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef, type ChangeEvent } from "react";
 import { Upload, Image as ImageIcon, Camera, Loader2, Sparkles, AlertTriangle, ShieldCheck } from "lucide-react";
+import { diseaseDetection } from "../api/endpoints/publicPortal";
 import { DISEASE_SAMPLES } from "../data";
 import { Language } from "../types";
 
@@ -15,7 +16,7 @@ export default function DiseaseDetection({ language }: DiseaseDetectionProps) {
   const [diagnosis, setDiagnosis] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setMimeType(file.type);
@@ -40,24 +41,17 @@ export default function DiseaseDetection({ language }: DiseaseDetectionProps) {
     if (!selectedImage) return;
     setLoading(true);
     try {
-      const response = await fetch("/api/disease-detection", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64: selectedImage,
-          mimeType,
-          cropName,
-          language,
-        }),
+      const data = await diseaseDetection({
+        imageBase64: selectedImage,
+        mimeType,
+        cropName: cropName || null,
+        language,
       });
-      const data = await response.json();
       if (data.success) {
         setDiagnosis(data.diagnosis);
-      } else {
-        alert(data.error || "Diagnosis failed");
       }
-    } catch (err: any) {
-      alert("Error: " + err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Diagnosis failed");
     } finally {
       setLoading(false);
     }

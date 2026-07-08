@@ -121,7 +121,7 @@ def trigger_alert(
     }
 
 
-@router.get("/alerts", response_model=list[AlertOut])
+@router.get("/alerts", response_model=dict)
 def list_alerts(
     farmer_id: str | None = None,
     status: str | None = None,

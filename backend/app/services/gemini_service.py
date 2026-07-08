@@ -177,12 +177,18 @@ Respond with plain text only, no markdown."""
 
 # ---------- 3. Crop Health Diagnosis (Vision) ----------
 def diagnose_crop_photo(
-    image_bytes: bytes, mime_type: str, language: str = "en"
+    image_bytes: bytes,
+    mime_type: str,
+    language: str = "en",
+    crop_name: str | None = None,
 ) -> dict:
+    crop_context = (
+        f"\nThe farmer reports this is a {crop_name} crop." if crop_name else ""
+    )
     prompt = f"""SYSTEM:
 You are assisting a farmer with a crop health issue based on a photo.
 You are not a replacement for expert diagnosis — flag uncertainty honestly.
-Respond in language code: {language}.
+Respond in language code: {language}.{crop_context}
 
 TASK:
 Look at the attached image of a crop. Identify the likely issue (disease, pest,
@@ -219,3 +225,149 @@ Rule of thumb: set escalate_to_rsk to true whenever confidence is "low"."""
     if str(result.get("confidence", "")).lower() == "low":
         result["escalate_to_rsk"] = True
     return result
+
+
+# ---------- 4. Public Crop Recommendation (standalone, no ward/plot) ----------
+def get_crop_recommendation_public(
+    n: float,
+    p: float,
+    k: float,
+    soil_type: str,
+    ph: float,
+    temperature: float,
+    rainfall: float,
+    state: str,
+    language: str = "en",
+) -> str:
+    prompt = f"""SYSTEM:
+You are an agricultural advisor. You must ONLY use the data provided below.
+Do not use general knowledge to fill gaps. If the provided data is insufficient
+to make a confident recommendation, say so explicitly rather than guessing.
+Always cite which specific data point(s) informed each part of your answer.
+
+DATA PROVIDED:
+- Nitrogen (N): {n}
+- Phosphorus (P): {p}
+- Potassium (K): {k}
+- Soil type: {soil_type}
+- Soil pH: {ph}
+- Temperature: {temperature}°C
+- Rainfall: {rainfall} mm
+- State: {state}
+
+TASK:
+Recommend the most suitable crop for this farmer's land based on the soil
+nutrient profile and climate conditions provided. Include a clear rationale
+referencing the specific N, P, K, pH, and climate values.
+
+Respond in language code: {language}.
+
+Respond with plain text only, no markdown, no JSON. Begin with the
+recommended crop name in bold, then explain why using the data above."""
+
+    response_json = _call_gemini([{"parts": [{"text": prompt}]}])
+    return _extract_text(response_json).strip()
+
+
+# ---------- 5. Irrigation Advice ----------
+def get_irrigation_advice(
+    crop_name: str,
+    soil_type: str,
+    stage: str,
+    source: str,
+    language: str = "en",
+) -> str:
+    prompt = f"""SYSTEM:
+You are an agricultural irrigation advisor. You must ONLY use the data provided below.
+Do not use general knowledge to fill gaps. If the provided data is insufficient
+to make a confident recommendation, say so explicitly rather than guessing.
+Always cite which specific data point(s) informed each part of your answer.
+
+DATA PROVIDED:
+- Crop: {crop_name}
+- Soil type: {soil_type}
+- Growth stage: {stage}
+- Water source: {source}
+
+TASK:
+Generate a practical irrigation schedule/advice for this farmer. Cover:
+how much water to apply, how often, and any stage-specific precautions.
+Tailor the advice to the soil type and water source.
+
+Respond in language code: {language}.
+
+Respond with plain text only, no markdown, no JSON. Keep it practical
+and actionable for a smallholder farmer."""
+
+    response_json = _call_gemini([{"parts": [{"text": prompt}]}])
+    return _extract_text(response_json).strip()
+
+
+# ---------- 7. Chatbot (conversational) ----------
+def get_chatbot_response(
+    message: str,
+    history: list[dict],
+    language: str = "en",
+    location: str = "India",
+) -> str:
+    lang_instruction = ""
+    if language == "hi":
+        lang_instruction = "IMPORTANT: Respond entirely in Hindi (हिन्दी). Use simple, conversational words."
+    elif language == "bn":
+        lang_instruction = "IMPORTANT: Respond entirely in Bengali (বাংলা). Use simple, conversational words."
+
+    system = f"""SYSTEM:
+You are "Krishi AI Assistant", a friendly, empathetic, and knowledgeable agricultural chatbot for Indian farmers.
+Answer queries about crops, soil health, pesticides, weather impact, market prices (mandi rates),
+and central/state government schemes (PM-KISAN, PM-FBY, KCC).
+Provide concise, direct, and actionable advice. Do not use jargon.
+Relate advice to the local context (Location: {location}).
+{lang_instruction}
+
+IMPORTANT: Respond with plain text only, no markdown formatting, no JSON."""
+
+    formatted: list[dict] = [{"role": "user", "parts": [{"text": system}]}]
+    for msg in history:
+        role = "user" if msg.get("role") == "user" else "model"
+        formatted.append({"role": role, "parts": [{"text": msg.get("text", "")}]})
+    formatted.append({"role": "user", "parts": [{"text": message}]})
+
+    response_json = _call_gemini(formatted)
+    return _extract_text(response_json).strip()
+
+
+# ---------- 6. Weather Advisory Bulletin ----------
+def get_weather_advisory(
+    temperature: float,
+    humidity: float,
+    wind_speed: float,
+    soil_moisture: float | None,
+    pest_risk_index: str,
+    language: str = "en",
+) -> str:
+    prompt = f"""SYSTEM:
+You are an agricultural weather advisor. You must ONLY use the data provided below.
+Do not use general knowledge to fill gaps. If the provided data is insufficient
+to make a confident recommendation, say so explicitly rather than guessing.
+Always cite which specific data point(s) informed each part of your answer.
+
+CURRENT WEATHER METRICS:
+- Temperature: {temperature}°C
+- Humidity: {humidity}%
+- Wind speed: {wind_speed} m/s
+- Estimated soil moisture: {soil_moisture or "unavailable"}
+- Pest risk index: {pest_risk_index}
+
+TASK:
+Write a short advisory bulletin for a farmer covering:
+1. Whether conditions are favourable or risky for crops right now
+2. Any actions the farmer should take (irrigation, pest monitoring, wind protection, etc.)
+3. What to watch for in the coming days based on the current metrics
+
+Respond in language code: {language}.
+
+Respond with plain text only, no markdown, no JSON. Keep it practical
+and actionable for a smallholder farmer."""
+
+    response_json = _call_gemini([{"parts": [{"text": prompt}]}])
+    return _extract_text(response_json).strip()

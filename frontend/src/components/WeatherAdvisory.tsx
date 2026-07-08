@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { CloudRain, Thermometer, Wind, Droplets, AlertTriangle, CloudSun, Loader2, Sparkles } from "lucide-react";
+import { weatherAdvisory } from "../api/endpoints/publicPortal";
+import type { PublicWeatherAdvisoryResponse } from "../api/types";
 import { Language } from "../types";
 
 interface WeatherAdvisoryProps {
@@ -7,29 +9,22 @@ interface WeatherAdvisoryProps {
 }
 
 export default function WeatherAdvisory({ language }: WeatherAdvisoryProps) {
-  const [state, setState] = useState("West Bengal");
-  const [district, setDistrict] = useState("Nadia");
+  const [state, setState] = useState("Andhra Pradesh");
+  const [district, setDistrict] = useState("Guntur");
   const [loading, setLoading] = useState(false);
   const [advisory, setAdvisory] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<any>(null);
+  const [metrics, setMetrics] = useState<PublicWeatherAdvisoryResponse["metrics"] | null>(null);
 
   const fetchAdvisory = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/weather-advisory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state, district, language }),
-      });
-      const data = await response.json();
+      const data = await weatherAdvisory({ state, district, language });
       if (data.success) {
         setAdvisory(data.advisory);
         setMetrics(data.metrics);
-      } else {
-        alert(data.error || "Failed to generate advisory");
       }
-    } catch (err: any) {
-      alert("Error: " + err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to generate advisory");
     } finally {
       setLoading(false);
     }
@@ -106,11 +101,9 @@ export default function WeatherAdvisory({ language }: WeatherAdvisoryProps) {
             onChange={(e) => setState(e.target.value)}
             className="w-full bg-stone-50 border-2 border-stone-900 rounded-xl px-3.5 py-2.5 text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
           >
-            <option value="West Bengal">West Bengal</option>
-            <option value="Punjab">Punjab</option>
-            <option value="Uttar Pradesh">Uttar Pradesh</option>
-            <option value="Bihar">Bihar</option>
-            <option value="Maharashtra">Maharashtra</option>
+            <option value="Andhra Pradesh">
+    Andhra Pradesh
+</option>
           </select>
         </div>
 
@@ -121,7 +114,7 @@ export default function WeatherAdvisory({ language }: WeatherAdvisoryProps) {
             value={district}
             onChange={(e) => setDistrict(e.target.value)}
             className="w-full bg-stone-50 border-2 border-stone-900 rounded-xl px-3.5 py-2.5 text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
-            placeholder="e.g. Nadia, Amritsar"
+           placeholder="e.g. Guntur"
           />
         </div>
 
@@ -176,7 +169,7 @@ export default function WeatherAdvisory({ language }: WeatherAdvisoryProps) {
                   <Wind className="w-4 h-4 text-sky-600" />
                   {labels.wind}
                 </span>
-                <span className="font-black text-stone-900">{metrics.wind} km/h</span>
+                <span className="font-black text-stone-900">{metrics.wind_speed} km/h</span>
               </div>
 
               <div className="flex justify-between items-center bg-stone-50 p-2.5 rounded-xl border-2 border-stone-900">
@@ -191,7 +184,7 @@ export default function WeatherAdvisory({ language }: WeatherAdvisoryProps) {
                 <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                 <div>
                   <div className="font-bold uppercase tracking-wider">{labels.pestRisk}</div>
-                  <div className="mt-1 text-stone-800 font-bold">{metrics.index}</div>
+                  <div className="mt-1 text-stone-800 font-bold">{metrics.pestRiskIndex}</div>
                 </div>
               </div>
             </div>
