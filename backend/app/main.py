@@ -142,7 +142,7 @@ async def healthz():
         "yes" if settings.twilio_account_sid and settings.twilio_auth_token else "no"
     )
     checks["openweather_configured"] = "yes" if settings.openweather_api_key else "no"
-    checks["storage_configured"] = "yes" if settings.firebase_storage_bucket else "no"
+    checks["imagekit_configured"] = "yes" if settings.imagekit_private_key else "no"
 
     if checks["status"] == "degraded":
         return JSONResponse(status_code=503, content=checks)

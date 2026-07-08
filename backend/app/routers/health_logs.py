@@ -1,14 +1,14 @@
-import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 
-from app.firebase_client import db, bucket
+from app.firebase_client import db
 from app.firestore_utils import doc_to_dict, get_or_404
 from app.schemas import HealthLogOut, HealthLogResolve
 from app.auth import require_admin
 from app.routers.deps import limiter
 from app.services.gemini_service import diagnose_crop_photo, GeminiError
+from app.services.imagekit_service import upload_image
 from app.config import get_settings
 
 router = APIRouter(tags=["Health Logs"])
@@ -21,17 +21,10 @@ ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 def _upload_to_storage(
     image_bytes: bytes, mime_type: str, farmer_id: str
 ) -> str | None:
-    """Uploads the photo to Firebase Storage and returns a public URL.
-    Returns None (non-fatal) if Storage isn't configured — the diagnosis still
+    """Uploads the photo to ImageKit and returns a public URL.
+    Returns None (non-fatal) if ImageKit isn't configured — the diagnosis still
     runs, we just won't have a persisted image_url for the dashboard to show."""
-    if bucket is None:
-        return None
-    ext = "jpg" if mime_type == "image/jpeg" else mime_type.split("/")[-1]
-    blob_path = f"health_logs/{farmer_id}/{uuid.uuid4()}.{ext}"
-    blob = bucket.blob(blob_path)
-    blob.upload_from_string(image_bytes, content_type=mime_type)
-    blob.make_public()
-    return blob.public_url
+    return upload_image(image_bytes, mime_type, folder="health_logs")
 
 
 @router.post("/health/log", response_model=HealthLogOut)

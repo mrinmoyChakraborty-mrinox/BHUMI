@@ -1,94 +1,225 @@
 # BHUMI — Backend
 
-FastAPI + Firebase backend implementing the full spec from the planning docs.
-Firestore replaces the Supabase/Postgres schema — collection names mirror the
-original table names 1:1 so the mapping is easy to follow.
+FastAPI + Firebase backend powering BHUMI's AI-driven crop advisory, disease detection, and alert system for smallholder farmers. Firestore replaces the original Supabase/Postgres schema — collection names mirror the original table names 1:1.
 
 ## Stack
-- **API**: FastAPI
-- **DB**: Cloud Firestore (via `firebase-admin`)
-- **File storage**: Firebase Storage (crop health photos)
-- **Auth**: Firebase Authentication (RSK officer / admin dashboard login)
-- **AI**: Gemini API (recommendation, advisory text, vision diagnosis) — direct HTTP
-- **Voice/SMS**: Twilio (with webhook signature validation)
-- **Live weather**: OpenWeatherMap (dry-spell forecast), with IMD via data.gov.in as production alternative
-- **Rate limiting**: `slowapi` (per-IP, configurable limits on paid endpoints)
-- **Phone validation**: `phonenumbers` (E.164 format enforced on farmer creation)
+
+| Layer | Technology |
+|-------|-----------|
+| **API framework** | FastAPI (async, auto-docs at `/docs`) |
+| **Database** | Cloud Firestore via `firebase-admin` Python SDK |
+| **Auth** | Firebase Authentication (ID token verification for RSK/admin) |
+| **Image storage** | ImageKit (crop health photos) |
+| **AI / LLM** | Gemini API (recommendation, advisory text, vision diagnosis) |
+| **Voice / SMS** | Twilio (outbound calls + SMS with webhook signature validation) |
+| **Weather** | OpenWeatherMap (forecast for dry-spell detection) |
+| **Geocoding** | Google Maps Geocoding API (district → lat/lon) |
+| **Rate limiting** | `slowapi` (per-IP, configurable limits on paid endpoints) |
+| **Phone validation** | `phonenumbers` (E.164 enforcement on farmer creation) |
+| **Retry / resilience** | `tenacity` (exponential backoff on Gemini, OWM calls) |
+| **Config** | `pydantic-settings` (`.env` → `Settings` dataclass) |
+| **Serialization** | Pydantic v2 (request/response models, field validators) |
+| **Container** | Docker multi-stage build (non-root, slim image) |
 
 ## Project layout
+
 ```
 app/
-  main.py                 FastAPI app + logging + global exception handler + healthz
-  config.py               Env var settings (pydantic-settings)
-  firebase_client.py       Firebase Admin SDK init (Firestore/Storage/Auth)
-  firestore_utils.py       Small doc-to-dict / 404 helpers
-  auth.py                  Firebase ID token verification, admin gating
-  schemas.py               Pydantic request/response models + E.164 phone validator
+  main.py                 FastAPI app — lifespan, CORS, exception handler, /healthz
+  config.py               pydantic-settings: all env vars (Firebase, ImageKit, Gemini, Twilio, etc.)
+  firebase_client.py      Firebase Admin SDK init — Firestore client + Auth (no Storage)
+  firestore_utils.py      doc_to_dict(), get_or_404() helpers
+  auth.py                 Firebase ID token verification + admin claim gating
+  schemas.py              Pydantic models: District, Ward, Farmer, Plot, Recommendation,
+                          Alert, HealthLog, Officer + E.164 phone validator
   routers/
-    deps.py                Shared deps: Twilio signature validation, rate limiter
-    districts.py    farmers.py       plots.py          wards.py
-    recommendations.py               alerts.py
-    twilio_webhooks.py               health_logs.py
-    dashboard.py                     admin.py
+    __init__.py
+    deps.py               Shared dependencies: rate limiter, Twilio signature validation
+    districts.py           CRUD for district reference data
+    wards.py               CRUD + /{ward_id}/refresh-forecast (live OWM dry-days)
+    farmers.py             CRUD + /by-phone/{phone} lookup + /{farmer_id}/timeline
+    plots.py               CRUD for farmer plots
+    recommendations.py     POST /recommend (Gemini) + history listing
+    alerts.py              POST /alert/trigger (rule engine → Gemini → Twilio) + CRUD
+    health_logs.py         POST /health/log (image upload → Gemini Vision → Firestore)
+    twilio_webhooks.py     POST /voice-response, /sms-response (signature-validated)
+    dashboard.py           RSK officer dashboard endpoints (me, summary, farmers, alerts, health-logs)
+    admin.py               RSK officer profile management (CRUD)
+    public_portal.py       Public /api/* endpoints + /api/chatbot WebSocket
   services/
-    gemini_service.py      3 Gemini prompts with exponential-backoff retry
-    twilio_service.py       Outbound call + SMS + TwiML builders
-    weather_service.py      OpenWeatherMap with exponential-backoff retry
-    rule_engine.py          Dry-spell trigger condition
+    __init__.py
+    gemini_service.py      6 Gemini prompt functions with tenacity retry (3 attempts)
+    twilio_service.py       Outbound call + SMS + TwiML per-language builders
+    weather_service.py      OpenWeatherMap forecast + current-weather with tenacity retry
+    geocoding_service.py    Google Maps Geocoding API (district → lat/lon)
+    rule_engine.py          Dry-spell trigger condition logic
+    imagekit_service.py     ImageKit.io upload wrapper (REST API, Basic Auth)
 scripts/
-  seed_data.py             Seeds real Guntur data
-  create_admin_user.py     One-shot admin user creation (Firebase Auth + Firestore profile)
+  seed_data.py             Seeds real Guntur district + ward + 2 demo farmers/plots
+  create_admin_user.py     One-shot: Firebase Auth user + admin claim + Firestore profile
 tests/
-  test_rule_engine.py      Unit tests for rule engine (pure logic)
-  test_gemini_service.py   Unit tests for Gemini client (mocked HTTP)
-  test_twilio_service.py   Unit tests for TwiML builders (assert on XML)
-firestore.rules            Locks down direct client Firestore access
-firestore.indexes.json     Composite indexes for production queries
-Dockerfile                 Multi-stage build, non-root user
+  test_rule_engine.py      Unit tests (pure logic, no deps)
+  test_gemini_service.py   Unit tests (mocked HTTP)
+  test_twilio_service.py   Unit tests (TwiML assertion)
+firestore.rules            Blocks direct client Firestore access
+firestore.indexes.json     Composite indexes for production query performance
+Dockerfile                 Multi-stage, non-root
 .dockerignore
-requirements.txt
-.env.example
+requirements.txt           Python dependencies
+.env.example               All config keys with defaults/instructions
 ```
 
-## Firestore collections (mirrors 03_SCHEMA.md)
-| Collection | Doc ID | Notes |
-|---|---|---|
-| `districts` | auto | name, state, notes |
-| `ward_data` | `ward_id` slug (e.g. `guntur-ward-01`) | soil_type, avg_rainfall_mm, groundwater_depth_m, forecast_dry_days, lat/lon |
-| `farmers` | auto | name, phone (E.164), preferred_language, ward_id |
-| `plots` | auto | farmer_id, ward_id, soil_type, current_crop, crop_stage |
-| `recommendations` | auto | plot_id, recommended_crop, rationale, confidence, source_data |
-| `alerts` | auto | farmer_id, plot_id, alert_type, message_text, channel, status, farmer_response, call_sid |
-| `health_logs` | auto | farmer_id, plot_id, image_url, diagnosis, confidence, recommended_action, status |
-| `rsk_officers` | Firebase Auth `uid` | name, ward_id, role (`rsk_officer` \| `admin`) |
+## Firestore collections
+
+| Collection | Doc ID | Key fields |
+|-----------|--------|-----------|
+| `districts` | auto | `name`, `state`, `notes` |
+| `ward_data` | slug (e.g. `guntur-ward-01`) | `district_id`, `soil_type`, `avg_rainfall_mm`, `groundwater_depth_m`, `forecast_dry_days`, `lat`, `lon` |
+| `farmers` | auto | `name`, `phone` (E.164), `preferred_language`, `ward_id`, `state`, `district` |
+| `plots` | auto | `farmer_id`, `ward_id`, `soil_type`, `current_crop`, `crop_stage` |
+| `recommendations` | auto | `plot_id`, `recommended_crop`, `rationale`, `confidence`, `source_data` |
+| `alerts` | auto | `farmer_id`, `plot_id`, `alert_type`, `message_text`, `channel`, `status`, `farmer_response`, `call_sid` |
+| `health_logs` | auto | `farmer_id`, `plot_id`, `image_url`, `diagnosis`, `confidence`, `recommended_action`, `status`, `crop_name`, `source` |
+| `rsk_officers` | Firebase Auth UID | `name`, `ward_id`, `role` (`rsk_officer` / `admin`) |
+| `public_recommendations` | auto | `n`, `p`, `k`, `soilType`, `ph`, `temperature`, `rainfall`, `state`, `language`, `recommendation` |
+| `portal_queries` | auto | `type` (irrigation/weather), `inputs`, `output`, `metrics` |
+
+## Endpoints
+
+### Public — no auth (rate-limited)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/` | Service info |
+| GET | `/healthz` | Health check + external service config status |
+| POST | `/farmers` | Create farmer (E.164 phone validation) |
+| GET | `/farmers`, `/farmers/{id}` | List / get farmer |
+| GET | `/farmers/by-phone/{phone}` | Lookup farmer by phone number |
+| GET | `/farmers/{id}/timeline` | Merged alert + health-log + recommendation timeline |
+| POST | `/plots` | Create plot |
+| GET | `/plots`, `/plots/{id}` | List / get plot |
+| POST | `/recommend` | Gemini crop recommendation for a plot |
+| GET | `/recommend/{plot_id}/history` | Past recommendations |
+| POST | `/health/log` | Upload crop photo (multipart) → Gemini Vision → store result |
+| GET | `/health/logs`, `/health/log/{id}` | List / get health logs |
+| POST | `/api/crop-recommendation` | Standalone Gemini crop rec (N, P, K, soilType, pH, temp, rainfall) |
+| POST | `/api/disease-detection` | Base64 image → Gemini Vision diagnosis |
+| POST | `/api/irrigation-advice` | Gemini irrigation scheduling advice |
+| POST | `/api/weather-advisory` | Gemini weather bulletin (fetches live OWM metrics) |
+| WS | `/api/chatbot` | WebSocket — multi-turn Gemini chat with optional weather fetch |
+| GET | `/wards`, `/wards/{id}` | List / get ward data |
+| POST | `/wards/{id}/refresh-forecast` | Pull live OWM 5-day forecast → update `forecast_dry_days` |
+| POST | `/alerts`, `/alerts/{id}` | List / get alerts |
+| POST | `/alert/trigger` | 🔐 **Firebase auth required** — rule engine → Gemini → Twilio call+SMS |
+
+### Twilio webhooks (signature-validated)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/twilio/voice-response` | DTMF keypress capture from farmer |
+| POST | `/twilio/sms-response` | Inbound SMS capture |
+
+### RSK Dashboard (Firebase ID token required)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/dashboard/me` | Whoami — returns calling officer profile |
+| GET | `/dashboard/summary` | Stat-strip: farmer count, active alerts, flagged health cases, ward count |
+| GET | `/dashboard/farmers` | Farmer list with latest alert status (capped at 100) |
+| GET | `/dashboard/alerts` | Alerts with `ui_color` (red/yellow/green, capped at 100) |
+| GET | `/dashboard/health-logs` | Flagged cases for RSK review (capped at 100) |
+| PATCH | `/health/log/{id}/resolve` | Mark a case resolved (adds RSK notes) |
+
+### Admin (Firebase custom claim `admin: true`)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| CRUD | `/districts` | Manage district reference data |
+| CRUD | `/wards` | Manage ward reference data |
+| CRUD | `/admin/officers` | Manage RSK officer profiles |
+| PATCH/DELETE | `/farmers/{id}`, `/plots/{id}`, `/alerts/{id}` | Edit/delete core entities |
+| POST | `/admin/officers` + `ADMIN_BOOTSTRAP_UIDS` | Bootstrap first admin |
+
+### Pagination
+
+List endpoints return `{"items": [...], "next_cursor": "doc_id"}`. Query params: `limit` (default 50, max 200), `start_after` (doc ID from previous page).
+
+## Architecture
+
+### Image upload flow (ImageKit)
+
+```
+Farmer/User uploads photo
+  → Frontend: FileReader.readAsDataURL → base64 data URL
+  → Backend (public_portal.py / health_logs.py):
+      → Validates MIME type (JPEG/PNG/WebP) & size (≤8 MB)
+      → Gemini Vision diagnosis (base64 → inline_data)
+      → imagekit_service.upload_image() → ImageKit REST API
+      → ImageKit returns public URL → stored in Firestore health_logs.image_url
+```
+
+ImageKit upload uses HTTP Basic Auth with `IMAGEKIT_PRIVATE_KEY`, stores files under the `/BHUMI/` folder. Returns `None` (non-fatal) if ImageKit credentials are missing — the Gemini diagnosis still runs.
+
+### Gemini AI pipeline
+
+All AI calls follow a **context-stuffing** pattern (no RAG, no vector DB, no dynamic queries):
+1. Receive request → hardcoded Firestore query for known data
+2. Code explicitly extracts relevant fields
+3. Construct prompt with injected values + "use only the data below" instruction
+4. Send to Gemini (`diagnose_crop_photo`, `get_crop_recommendation`, `get_advisory_message`, etc.)
+5. Parse JSON/text response → store in Firestore + return to caller
+
+Retry policy (via `tenacity`): 3 attempts with exponential backoff (1–10 s) on 5xx/timeout; 4xx/auth failures surface immediately as 502/504.
+
+### Alert pipeline
+
+```
+POST /alert/trigger (Firebase auth required)
+  → rule_engine.should_trigger_dry_spell_alert(forecast_dry_days, crop_stage)
+  → gemini_service.get_advisory_message() → short TTS-optimized text
+  → twilio_service.make_call() + send_sms()
+  → Firestore: alerts document created with status="sent"
+  → Twilio webhook captures farmer DTMF/SMS response
+```
+
+Rate-limited to 5/min per IP. Idempotent within 30-minute window (same plot+type) — use `force=true` to override.
 
 ## Setup
 
 ### 1. Firebase project
+
 1. Create a project in the [Firebase Console](https://console.firebase.google.com).
-2. Enable **Firestore**, **Storage**, and **Authentication**.
+2. Enable **Firestore** and **Authentication** (Email/Password + Phone).
 3. Project Settings → Service Accounts → **Generate new private key** → save as `firebase-service-account.json`.
-4. Deploy `firestore.rules`:
+4. Deploy security rules:
    ```bash
    npm install -g firebase-tools
    firebase login
    firebase init firestore
    firebase deploy --only firestore:rules
    ```
-5. Deploy `firestore.indexes.json` (required for production queries):
+5. Deploy composite indexes (required for production queries):
    ```bash
    firebase deploy --only firestore:indexes
    ```
 
-### 2. Environment
+### 2. ImageKit
+
+1. Create an account at [ImageKit.io](https://imagekit.io).
+2. Go to Developer → API Keys and copy **Private Key** and **Public Key**.
+3. Set `IMAGEKIT_PRIVATE_KEY` and `IMAGEKIT_PUBLIC_KEY` in `.env`.
+
+### 3. Environment
+
 ```bash
 cp .env.example .env
-# fill in: FIREBASE_STORAGE_BUCKET, GEMINI_API_KEY, TWILIO_*, OPENWEATHER_API_KEY, PUBLIC_BASE_URL
+# fill in: IMAGEKIT_PRIVATE_KEY, GEMINI_API_KEY, TWILIO_*, OPENWEATHER_API_KEY, PUBLIC_BASE_URL
 ```
 
 `PUBLIC_BASE_URL` must be a URL Twilio can reach for webhooks — use `ngrok http 8000` during local dev.
 
-### 3. Install & run
+### 4. Install & run
+
 ```bash
 python -m venv venv && source venv/bin/activate     # Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -97,97 +228,62 @@ uvicorn app.main:app --reload --port 8000
 
 Visit `http://localhost:8000/docs` for interactive Swagger UI.
 
-### 4. Seed real district data
+### 5. Seed district data
+
 ```bash
 python -m scripts.seed_data
 ```
-This loads the real Guntur, AP data plus two demo farmers/plots. **Replace `+91XXXXXXXXXX` phone numbers with real Twilio-verified numbers before demo.**
 
-### 5. Create your first admin user
+Loads real Guntur, AP data (2 wards) + 2 demo farmers/plots. **Replace `+91XXXXXXXXXX` phone numbers with real Twilio-verified numbers before demo.**
+
+### 6. Create your first admin user
+
 ```bash
 python -m scripts.create_admin_user --email admin@example.com --password yourpassword --name "Admin"
 ```
-This creates the Firebase Auth user, sets the admin custom claim, and creates the Firestore profile in one step.
 
-### 6. Twilio webhook config
-No dashboard config needed — webhook URLs are passed dynamically per-call. Webhook endpoints validate `X-Twilio-Signature` using your `TWILIO_AUTH_TOKEN` and reject unauthenticated requests with 403. Just make sure `PUBLIC_BASE_URL` is reachable from the internet.
+Creates Firebase Auth user, sets admin custom claim, and creates Firestore profile in one step.
+
+### 7. Twilio webhook config
+
+No dashboard config needed — webhook URLs are passed dynamically per-call. All `/twilio/*` endpoints validate `X-Twilio-Signature` using `TWILIO_AUTH_TOKEN` and reject unauthenticated requests with 403. Ensure `PUBLIC_BASE_URL` is internet-reachable.
 
 ## Run tests
+
 ```bash
 pip install pytest pytest-mock
 python -m pytest tests/ -v --tb=short
 ```
 
 ## Docker
+
 ```bash
-docker build -t kisan-alert-backend .
-docker run -p 8000:8000 --env-file .env kisan-alert-backend
+docker build -t bhumi-backend .
+docker run -p 8000:8000 --env-file .env bhumi-backend
 ```
 
-## Endpoint reference
+## Security
 
-### Public / farmer-facing (no auth)
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/recommend` | Crop recommendation (Gemini + source data) |
-| GET | `/recommend/{plot_id}/history` | Past recommendations for a plot (paginated) |
-| POST | `/alert/trigger` | 🔐 **Firebase auth required** — runs rule engine → Gemini advisory → Twilio call+SMS. Rate-limited (5/min per IP). Idempotent within 30 min window (use `force=true` to override). |
-| POST | `/twilio/voice-response` | Twilio webhook — DTMF keypress capture (signature validated) |
-| POST | `/twilio/sms-response` | Twilio webhook — inbound SMS capture (signature validated) |
-| POST | `/health/log` | Upload crop photo → Gemini Vision diagnosis. Rate-limited (10/min per IP). Max image size 8 MB. |
-| GET | `/health/logs`, `/health/log/{id}` | Read health logs (paginated) |
-| GET/POST | `/farmers`, `/plots` | Farmer & plot registration (paginated). Phone must be E.164 format. |
-
-### Dashboard (Firebase ID token required)
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/dashboard/me` | Self-service whoami — returns calling user's officer profile |
-| GET | `/dashboard/summary` | Stat-strip counts |
-| GET | `/dashboard/farmers` | Farmer list + latest alert status (capped at 100) |
-| GET | `/dashboard/alerts` | Alerts with `ui_color` (red/yellow/green, capped at 100) |
-| GET | `/dashboard/health-logs` | Flagged cases for RSK review (capped at 100) |
-| PATCH | `/health/log/{id}/resolve` | Mark a case resolved (admin) |
-
-### Admin-only (Firebase custom claim `admin: true`)
-| Method | Path | Purpose |
-|---|---|---|
-| CRUD | `/districts`, `/wards`, `/admin/officers` | Full management |
-| PATCH/DELETE | `/farmers/{id}`, `/plots/{id}`, `/alerts/{id}` | Edits/deletes on core entities |
-| POST | `/wards/{ward_id}/refresh-forecast` | Pull live OpenWeatherMap dry-day forecast |
-| GET | `/farmers/{farmer_id}/timeline` | Merged alert + health-log + recommendation history for a farmer |
-
-**Bootstrapping your first admin:** Use `scripts/create_admin_user.py` (see Setup step 5). Alternatively, add a Firebase Auth UID to `ADMIN_BOOTSTRAP_UIDS` in `.env` and call `POST /admin/officers` with `role: "admin"`.
-
-### Pagination
-List endpoints return `{"items": [...], "next_cursor": "doc_id"}`. Pass `limit` (default 50, max 200) and `start_after` (doc ID from previous page) to paginate.
-
-## Security features added
-- **Twilio webhook signature validation** — every `/twilio/*` request is verified against `X-Twilio-Signature` header; rejects non-Twilio requests with 403
-- **Rate limiting** — paid endpoints (`/alert/trigger`, `/health/log`) are per-IP rate-limited (configurable via `RATE_LIMIT_*` env vars)
-- **Auth on paid endpoints** — `/alert/trigger` requires a valid Firebase ID token (any RSK officer or admin can trigger)
-- **E.164 phone validation** — `FarmerCreate.phone` rejects malformed numbers at the API boundary
-- **Image size limit** — 8 MB max on photo upload (returns 413 if exceeded)
-- **CORS tightened** — only `GET`, `POST`, `PATCH`, `DELETE`, `OPTIONS`; only allowed headers are `Authorization`, `Content-Type`, `X-Twilio-Signature`
-- **Idempotency** — duplicate `/alert/trigger` calls for the same plot+type within 30 minutes are silently skipped (use `force=true` to override)
-
-## External API reliability
-- All external calls (Gemini, OpenWeatherMap) use **exponential-backoff retry** via `tenacity` (3 attempts, 1-10s backoff) for 5xx/timeout errors
-- Non-retryable errors (4xx, auth failures) surface immediately as 502/504
+- **Twilio webhook signature validation** — every `/twilio/*` request verified against `X-Twilio-Signature` header; non-Twilio requests rejected with 403
+- **Rate limiting** — paid endpoints (`/alert/trigger`, `/health/log`, `/api/*`) per-IP rate-limited via `RATE_LIMIT_*` env vars
+- **Auth on paid endpoints** — `/alert/trigger` requires valid Firebase ID token
+- **E.164 phone validation** — `FarmerCreate.phone` validated via `phonenumbers` library
+- **Image size limit** — 8 MB max (returns 400 if exceeded)
+- **CORS tightened** — only `GET/POST/PATCH/DELETE/OPTIONS`; allowed headers: `Authorization`, `Content-Type`, `X-Twilio-Signature`
+- **Idempotency** — duplicate `/alert/trigger` for same plot+type within 30 min silently skipped (use `force=true` to override)
 
 ## Known gaps
-- **Telugu TTS**: Twilio has no native Telugu voice. The code falls back to `en-IN` (Indian English accent) for language code `te`. If this undercuts the accessibility story, consider swapping TTS providers or using a pre-recorded audio file for Telugu messages on critical alerts.
-- **Weather source**: OpenWeatherMap is used for hackathon speed. For production in India, swap to **IMD API** (`api.imd.gov.in`) or IMD data proxied through `data.gov.in` — see the planning docs for integration notes. No architecture changes needed.
 
-## Data provenance (for the pitch)
-- **Static, real**: soil type, avg rainfall — AP govt district portal + CGWB reports (seeded via `scripts/seed_data.py`)
-- **Live**: `forecast_dry_days` via OpenWeatherMap — refresh with `POST /wards/{ward_id}/refresh-forecast` or wire to a cron job
-- **Simplified, labeled as such**: groundwater depth uses a representative coastal-AP value rather than real-time station data
+- **Telugu TTS**: Twilio has no native Telugu voice; falls back to `en-IN` (Indian English) for language code `te`
+- **Weather source**: OpenWeatherMap used for prototyping. Production should swap to **IMD API** (`api.imd.gov.in`) or data.gov.in proxy
+- **Groundwater depth**: Uses a representative coastal-AP value rather than real-time station data
 
-## Notes on the Firebase vs. Supabase swap
-The original architecture specced Supabase (Postgres + RLS). This build uses Firebase/Firestore instead — everything else (Gemini prompts, Twilio flow, rule engine, API shape) is unchanged. Trade-offs:
-- No SQL joins — the dashboard router does the farmer↔plot↔alert stitching in Python
-- No native row-level security — `firestore.rules` blocks all direct client access; every read/write goes through this FastAPI backend using the Admin SDK
-- Firestore has no server-side foreign key constraints — `firestore_utils.get_or_404` fails loudly instead of silently
+## Data provenance
 
-## Gitignore reminder
-`.env` and `firebase-service-account.json` are in `.gitignore` — both contain live secrets.
+| Data | Source | Freshness |
+|------|--------|-----------|
+| District info | AP govt district portal | Static (seeded) |
+| Soil type, avg rainfall | CGWB reports + AP govt | Static (seeded) |
+| Forecast dry days | OpenWeatherMap 5-day | Live (on refresh) |
+| Groundwater depth | Representative coastal-AP value | Static (labeled) |
+| Farmer/plot data | User registration | Live |

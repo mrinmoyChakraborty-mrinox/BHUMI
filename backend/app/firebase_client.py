@@ -3,12 +3,11 @@ Central Firebase Admin SDK bootstrap.
 
 Provides:
 - db          -> Firestore client
-- bucket      -> Cloud Storage bucket (for crop photo uploads)
 - verify_token -> wrapper around Firebase Auth ID token verification
 """
 import os
 import firebase_admin
-from firebase_admin import credentials, firestore, storage, auth
+from firebase_admin import credentials, firestore, auth
 
 from app.config import get_settings
 
@@ -26,22 +25,15 @@ def init_firebase():
     if os.path.exists(cred_path):
         cred = credentials.Certificate(cred_path)
     else:
-        # Falls back to Application Default Credentials
-        # (useful on Cloud Run / GCE where a service account is attached to the runtime)
         cred = credentials.ApplicationDefault()
 
-    options = {}
-    if settings.firebase_storage_bucket:
-        options["storageBucket"] = settings.firebase_storage_bucket
-
-    _app = firebase_admin.initialize_app(cred, options)
+    _app = firebase_admin.initialize_app(cred)
     return _app
 
 
 init_firebase()
 
 db = firestore.client()
-bucket = storage.bucket() if settings.firebase_storage_bucket else None
 
 
 def verify_token(id_token: str) -> dict:

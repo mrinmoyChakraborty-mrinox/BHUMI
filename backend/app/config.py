@@ -7,7 +7,11 @@ class Settings(BaseSettings):
 
     # Firebase
     firebase_service_account_path: str = "./firebase-service-account.json"
-    firebase_storage_bucket: str = ""
+
+    # ImageKit (replaces Firebase Storage for image uploads)
+    imagekit_private_key: str = ""
+    imagekit_public_key: str = ""
+    imagekit_url_endpoint: str = "https://ik.imagekit.io/RemediRX/BHUMI"
 
     # Gemini
     gemini_api_key: str = ""

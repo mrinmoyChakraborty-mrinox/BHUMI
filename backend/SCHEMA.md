@@ -10,7 +10,11 @@
 class Settings:
     # Firebase
     firebase_service_account_path: str = "./firebase-service-account.json"
-    firebase_storage_bucket: str = ""
+
+    # ImageKit
+    imagekit_private_key: str = ""
+    imagekit_public_key: str = ""
+    imagekit_url_endpoint: str = "https://ik.imagekit.io/RemediRX/BHUMI"
 
     # Gemini
     gemini_api_key: str = ""
@@ -357,7 +361,7 @@ class WeatherAdvisoryRequest(BaseModel):
 |-------|------|----------|-------|
 | `farmer_id` | string | ✓ | "" for anonymous public submissions |
 | `plot_id` | string | ✓ | "" for anonymous public submissions |
-| `image_url` | string\|null | | Firebase Storage public URL |
+| `image_url` | string\|null | | ImageKit public URL |
 | `diagnosis` | string | ✓ | Gemini Vision output |
 | `confidence` | string | ✓ | high/medium/low |
 | `recommended_action` | string | ✓ | |
@@ -627,7 +631,7 @@ Returns: msg.sid (string)
 | Method | Path | Response |
 |--------|------|----------|
 | GET | `/` | `{service: "Kisan Alert API", status: "ok"}` |
-| GET | `/healthz` | `{status, env, version, firestore, gemini_configured, twilio_configured, openweather_configured, storage_configured}` |
+| GET | `/healthz` | `{status, env, version, firestore, gemini_configured, twilio_configured, openweather_configured, imagekit_configured}` |
 
 ---
 

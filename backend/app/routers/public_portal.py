@@ -4,7 +4,6 @@ import json
 import logging
 import time
 import re
-import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -12,7 +11,8 @@ from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisco
 from pydantic import BaseModel, field_validator
 
 from app.config import get_settings
-from app.firebase_client import db, bucket
+from app.firebase_client import db
+from app.services.imagekit_service import upload_image
 from app.routers.deps import limiter
 from app.services.geocoding_service import GeocodingError, geocode_district
 from app.services.gemini_service import (
@@ -101,14 +101,7 @@ def _decode_data_url(data_url: str, expected_mime: str) -> bytes:
 
 
 def _upload_image(image_bytes: bytes, mime_type: str) -> str | None:
-    if bucket is None:
-        return None
-    ext = "jpg" if mime_type == "image/jpeg" else mime_type.split("/")[-1]
-    blob_path = f"health_logs/public_web/{uuid.uuid4()}.{ext}"
-    blob = bucket.blob(blob_path)
-    blob.upload_from_string(image_bytes, content_type=mime_type)
-    blob.make_public()
-    return blob.public_url
+    return upload_image(image_bytes, mime_type, folder="public_web")
 
 
 # ── 1. Crop Recommendation ───────────────────────────────────────────────
