@@ -77,12 +77,18 @@ def _parse_json_block(text: str) -> dict:
         "Gemini API call attempt %d failed, retrying...", retry_state.attempt_number
     ),
 )
-def _call_gemini(contents: list[dict], use_search_grounding: bool = False) -> dict:
+def _call_gemini(
+    contents: list[dict],
+    use_search_grounding: bool = False,
+    system_instruction: str | None = None,
+) -> dict:
     if not settings.gemini_api_key:
         raise GeminiError("GEMINI_API_KEY is not set")
 
     url = f"{GEMINI_BASE}/{settings.gemini_model}:generateContent"
-    payload = {"contents": contents}
+    payload: dict = {"contents": contents}
+    if system_instruction:
+        payload["system_instruction"] = {"parts": [{"text": system_instruction}]}
     if use_search_grounding:
         payload["tools"] = [{"googleSearch": {}}]
 
@@ -328,13 +334,13 @@ Relate advice to the local context (Location: {location}).
 
 IMPORTANT: Respond with plain text only, no markdown formatting, no JSON."""
 
-    formatted: list[dict] = [{"role": "user", "parts": [{"text": system}]}]
+    formatted: list[dict] = []
     for msg in history:
         role = "user" if msg.get("role") == "user" else "model"
         formatted.append({"role": role, "parts": [{"text": msg.get("text", "")}]})
     formatted.append({"role": "user", "parts": [{"text": message}]})
 
-    response_json = _call_gemini(formatted)
+    response_json = _call_gemini(formatted, system_instruction=system)
     return _extract_text(response_json).strip()
 
 
