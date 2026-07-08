@@ -214,7 +214,7 @@ async def irrigation_advice(
     db.collection("portal_queries").document().set(
         {
             "type": "irrigation",
-            "inputs": payload.model_dump(),
+            "inputs": payload.dict(),
             "output": advice,
             "created_at": datetime.now(timezone.utc),
         }
@@ -260,7 +260,7 @@ async def weather_advisory(
     db.collection("portal_queries").document().set(
         {
             "type": "weather",
-            "inputs": payload.model_dump()
+            "inputs": payload.dict()
             | {"lat": coords["lat"], "lon": coords["lon"]},
             "output": advisory,
             "metrics": metrics,

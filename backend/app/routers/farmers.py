@@ -98,7 +98,7 @@ def farmer_timeline(farmer_id: str, limit: int = 20):
 
 @router.post("", response_model=FarmerOut, status_code=201)
 def create_farmer(payload: FarmerCreate):
-    data = payload.model_dump()
+    data = payload.dict()
     data["created_at"] = datetime.now(timezone.utc)
     ref = db.collection(COLLECTION).document()
     ref.set(data)
@@ -110,7 +110,7 @@ def create_farmer(payload: FarmerCreate):
 )
 def update_farmer(farmer_id: str, payload: FarmerUpdate):
     get_or_404(db.collection(COLLECTION), farmer_id, "Farmer")
-    updates = clean_update(payload.model_dump())
+    updates = clean_update(payload.dict())
     if updates:
         db.collection(COLLECTION).document(farmer_id).update(updates)
     return doc_to_dict(db.collection(COLLECTION).document(farmer_id).get())

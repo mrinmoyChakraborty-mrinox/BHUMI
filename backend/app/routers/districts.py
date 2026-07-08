@@ -42,7 +42,7 @@ def get_district(district_id: str):
     dependencies=[Depends(require_admin)],
 )
 def create_district(payload: DistrictCreate):
-    data = payload.model_dump()
+    data = payload.dict()
     data["created_at"] = datetime.now(timezone.utc)
     try:
         return pg_create_district(data)
@@ -55,7 +55,7 @@ def create_district(payload: DistrictCreate):
 )
 def update_district(district_id: str, payload: DistrictUpdate):
     try:
-        return pg_update_district(district_id, payload.model_dump(exclude_none=True))
+        return pg_update_district(district_id, payload.dict(exclude_none=True))
     except ReferenceDataError as e:
         _pg_err(e)
 

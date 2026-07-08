@@ -49,7 +49,7 @@ def create_ward(payload: WardCreate):
         raise HTTPException(
             status_code=409, detail=f"Ward '{payload.ward_id}' already exists"
         )
-    data = payload.model_dump(exclude={"ward_id"})
+    data = payload.dict(exclude={"ward_id"})
     data["updated_at"] = datetime.now(timezone.utc)
     ref.set(data)
     return doc_to_dict(ref.get())
@@ -60,7 +60,7 @@ def create_ward(payload: WardCreate):
 )
 def update_ward(ward_id: str, payload: WardUpdate):
     get_or_404(db.collection(COLLECTION), ward_id, "Ward")
-    updates = clean_update(payload.model_dump())
+    updates = clean_update(payload.dict())
     if updates:
         updates["updated_at"] = datetime.now(timezone.utc)
         db.collection(COLLECTION).document(ward_id).update(updates)

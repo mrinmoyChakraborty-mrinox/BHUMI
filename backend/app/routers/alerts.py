@@ -155,7 +155,7 @@ def get_alert(alert_id: str):
 )
 def update_alert(alert_id: str, payload: AlertUpdate):
     get_or_404(db.collection(COLLECTION), alert_id, "Alert")
-    updates = clean_update(payload.model_dump())
+    updates = clean_update(payload.dict())
     if updates:
         db.collection(COLLECTION).document(alert_id).update(updates)
     return doc_to_dict(db.collection(COLLECTION).document(alert_id).get())

@@ -41,7 +41,7 @@ def get_plot(plot_id: str):
 
 @router.post("", response_model=PlotOut, status_code=201)
 def create_plot(payload: PlotCreate):
-    data = payload.model_dump()
+    data = payload.dict()
     data["last_updated"] = datetime.now(timezone.utc)
     ref = db.collection(COLLECTION).document()
     ref.set(data)
@@ -51,7 +51,7 @@ def create_plot(payload: PlotCreate):
 @router.patch("/{plot_id}", response_model=PlotOut)
 def update_plot(plot_id: str, payload: PlotUpdate):
     get_or_404(db.collection(COLLECTION), plot_id, "Plot")
-    updates = clean_update(payload.model_dump())
+    updates = clean_update(payload.dict())
     if updates:
         updates["last_updated"] = datetime.now(timezone.utc)
         db.collection(COLLECTION).document(plot_id).update(updates)

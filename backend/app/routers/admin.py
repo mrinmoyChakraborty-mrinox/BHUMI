@@ -30,7 +30,7 @@ def create_officer(payload: OfficerCreate):
     """Creates the Firestore profile for an RSK officer / admin. Assumes the
     Firebase Auth user (payload.uid) already exists — create that via Firebase
     Auth (console, SDK, or a separate signup flow) first."""
-    data = payload.model_dump(exclude={"uid"})
+    data = payload.dict(exclude={"uid"})
     data["created_at"] = datetime.now(timezone.utc)
     db.collection(COLLECTION).document(payload.uid).set(data)
     if payload.role == "admin":
@@ -41,7 +41,7 @@ def create_officer(payload: OfficerCreate):
 @router.patch("/officers/{uid}", response_model=OfficerOut)
 def update_officer(uid: str, payload: OfficerUpdate):
     get_or_404(db.collection(COLLECTION), uid, "Officer")
-    updates = clean_update(payload.model_dump())
+    updates = clean_update(payload.dict())
     if updates:
         db.collection(COLLECTION).document(uid).update(updates)
     if updates.get("role") == "admin":
