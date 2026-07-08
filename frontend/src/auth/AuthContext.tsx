@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setTokenGetter(async () => {
-      if (!auth.currentUser) return null;
+      if (!auth?.currentUser) return null;
       try {
         return await auth.currentUser.getIdToken();
       } catch {
@@ -61,6 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
@@ -78,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchRole]);
 
   const logout = useCallback(async () => {
-    await signOut(auth);
+    if (auth) await signOut(auth);
   }, []);
 
   return (

@@ -64,7 +64,7 @@ export default function DiseaseDetection({ language }: DiseaseDetectionProps) {
   const labels = {
     en: {
       title: "AI Crop Disease Detection",
-      sub: "Upload an image of a crop leaf or select a preloaded sample to identify plant diseases and organic treatments",
+      sub: "AI provides only a preliminary diagnosis. An Agricultural Officer (RSK) will review the case. Upload an image of a crop leaf or select a preloaded sample to identify plant diseases and organic treatments",
       drag: "Drag & drop or click to upload leaf photo",
       demoTitle: "One-Click Demo Leaf Samples (For Hackathon Judges)",
       cropInput: "Specify Crop Name (Optional)",
@@ -74,7 +74,7 @@ export default function DiseaseDetection({ language }: DiseaseDetectionProps) {
     },
     hi: {
       title: "एआई फसल रोग पहचान",
-      sub: "पौधों के रोगों और जैविक उपचारों की पहचान करने के लिए फसल की पत्ती की एक तस्वीर अपलोड करें या प्रीलोडेड नमूना चुनें",
+      sub: "AI केवल प्रारंभिक निदान प्रदान करता है। एक कृषि अधिकारी (RSK) मामले की समीक्षा करेगा। पौधों के रोगों और जैविक उपचारों की पहचान करने के लिए फसल की पत्ती की एक तस्वीर अपलोड करें या प्रीलोडेड नमूना चुनें",
       drag: "पत्ती की फोटो अपलोड करने के लिए खींचें और छोड़ें या क्लिक करें",
       demoTitle: "एक-क्लिक डेमो पत्ती नमूने (हैकाथॉन न्यायाधीशों के लिए)",
       cropInput: "फसल का नाम निर्दिष्ट करें (वैकल्पिक)",
@@ -84,13 +84,23 @@ export default function DiseaseDetection({ language }: DiseaseDetectionProps) {
     },
     bn: {
       title: "এআই ফসল রোগ সনাক্তকরণ",
-      sub: "উদ্ভিদের রোগ এবং জৈব প্রতিকার সনাক্ত করতে ফসলের পাতার ছবি আপলোড করুন বা প্রি-লোড করা নমুনা নির্বাচন করুন",
+      sub: "AI প্রাথমিক রোগ নির্ণয় প্রদান করে। একজন কৃষি অফিসার (RSK) কেসটি পর্যালোচনা করবেন। উদ্ভিদের রোগ এবং জৈব প্রতিকার সনাক্ত করতে ফসলের পাতার ছবি আপলোড করুন বা প্রি-লোড করা নমুনা নির্বাচন করুন",
       drag: "পাতার ছবি আপলোড করতে ড্র্যাগ অ্যান্ড ড্রপ করুন অথবা ক্লিক করুন",
       demoTitle: "এক-ক্লিক ডেমো পাতার নমুনা (হ্যাকথনের বিচারকদের জন্য)",
       cropInput: "ফসলের নাম লিখুন (ঐচ্ছিক)",
       diagnoseBtn: "এআই উদ্ভিদ রোগ নির্ণয় সম্পাদন করুন",
       reportTitle: "উদ্ভিদ রোগবিদ্যা রিপোর্ট ও প্রেসক্রিপশন",
       placeholder: "একটি ছবি আপলোড করুন বা ডেমো নমুনা ক্লিক করুন, তারপর জৈব এবং রাসায়নিক প্রতিকার দেখতে বিশ্লেষণ চালু করুন।",
+    },
+    te: {
+      title: "AI పంట వ్యాధి గుర్తింపు",
+      sub: "AI ప్రాథమిక రోగ నిర్ధారణను అందిస్తుంది. వ్యవసాయ అధికారి (RSK) కేసును సమీక్షిస్తారు. మొక్కల వ్యాధులు మరియు సేంద్రీయ చికిత్సలను గుర్తించడానికి పంట ఆకు చిత్రాన్ని అప్‌లోడ్ చేయండి లేదా ముందుగా లోడ్ చేసిన నమూనాను ఎంచుకోండి",
+      drag: "ఆకు ఫోటో అప్‌లోడ్ చేయడానికి డ్రాగ్ & డ్రాప్ చేయండి లేదా క్లిక్ చేయండి",
+      demoTitle: "వన్-క్లిక్ డెమో ఆకు నమూనాలు (హ్యాకథాన్ న్యాయమూర్తుల కోసం)",
+      cropInput: "పంట పేరు పేర్కొనండి (ఐచ్ఛికం)",
+      diagnoseBtn: "AI మొక్కల నిర్ధారణను నిర్వహించండి",
+      reportTitle: "మొక్కల వ్యాధి నివేదిక & ప్రిస్క్రిప్షన్",
+      placeholder: "ఫోటో అప్‌లోడ్ చేయండి లేదా డెమో నమూనాపై క్లిక్ చేయండి, ఆపై సేంద్రీయ మరియు రసాయన చికిత్సలను చూడటానికి విశ్లేషణను రన్ చేయండి.",
     }
   }[language];
 
@@ -190,6 +200,12 @@ export default function DiseaseDetection({ language }: DiseaseDetectionProps) {
               <ShieldCheck className="w-5 h-5 text-emerald-700 animate-pulse" />
               {labels.reportTitle}
             </h4>
+
+            <div className="bg-blue-50 border border-blue-300 rounded-xl p-4 mb-4 text-xs text-blue-900">
+              <strong>AI Diagnostic Notice</strong>
+              <br />
+              AI provides only a preliminary diagnosis. This case has been logged for Agricultural Officer (RSK) review.
+            </div>
 
             {diagnosis ? (
               <div className="prose prose-stone max-w-none text-stone-800 text-sm whitespace-pre-line leading-relaxed space-y-3">

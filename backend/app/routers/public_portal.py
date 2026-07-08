@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import logging
+import time
 import re
 import uuid
 from datetime import datetime, timezone
@@ -118,16 +119,17 @@ async def crop_recommendation(
     payload: CropRecommendationRequest,
 ):
     try:
-        recommendation = get_crop_recommendation_public(
-            n=payload.n,
-            p=payload.p,
-            k=payload.k,
-            soil_type=payload.soilType,
-            ph=payload.ph,
-            temperature=payload.temperature,
-            rainfall=payload.rainfall,
-            state=payload.state,
-            language=payload.language,
+        recommendation = await asyncio.to_thread(
+            get_crop_recommendation_public,
+            payload.n,
+            payload.p,
+            payload.k,
+            payload.soilType,
+            payload.ph,
+            payload.temperature,
+            payload.rainfall,
+            payload.state,
+            payload.language,
         )
     except GeminiError as e:
         raise HTTPException(status_code=502, detail=str(e))
@@ -166,11 +168,12 @@ async def disease_detection(
         )
 
     try:
-        result = diagnose_crop_photo(
+        result = await asyncio.to_thread(
+            diagnose_crop_photo,
             image_bytes,
             payload.mimeType,
-            language=payload.language,
-            crop_name=payload.cropName,
+            payload.language,
+            payload.cropName,
         )
     except GeminiError as e:
         raise HTTPException(status_code=502, detail=str(e))
@@ -205,12 +208,13 @@ async def irrigation_advice(
     payload: IrrigationAdviceRequest,
 ):
     try:
-        advice = get_irrigation_advice(
-            crop_name=payload.cropName,
-            soil_type=payload.soilType,
-            stage=payload.stage,
-            source=payload.source,
-            language=payload.language,
+        advice = await asyncio.to_thread(
+            get_irrigation_advice,
+            payload.cropName,
+            payload.soilType,
+            payload.stage,
+            payload.source,
+            payload.language,
         )
     except GeminiError as e:
         raise HTTPException(status_code=502, detail=str(e))
@@ -235,23 +239,28 @@ async def weather_advisory(
     payload: WeatherAdvisoryRequest,
 ):
     try:
-        coords = geocode_district(payload.district, payload.state)
+        coords = await asyncio.to_thread(
+            geocode_district, payload.district, payload.state
+        )
     except GeocodingError as e:
         raise HTTPException(status_code=502, detail=str(e))
 
     try:
-        metrics = get_current_weather_metrics(coords["lat"], coords["lon"])
+        metrics = await asyncio.to_thread(
+            get_current_weather_metrics, coords["lat"], coords["lon"]
+        )
     except WeatherServiceError as e:
         raise HTTPException(status_code=502, detail=str(e))
 
     try:
-        advisory = get_weather_advisory(
-            temperature=metrics["temperature"],
-            humidity=metrics["humidity"],
-            wind_speed=metrics["wind_speed"],
-            soil_moisture=metrics["soilMoisture"],
-            pest_risk_index=metrics["pestRiskIndex"],
-            language=payload.language,
+        advisory = await asyncio.to_thread(
+            get_weather_advisory,
+            metrics["temperature"],
+            metrics["humidity"],
+            metrics["wind_speed"],
+            metrics["soilMoisture"],
+            metrics["pestRiskIndex"],
+            payload.language,
         )
     except GeminiError as e:
         raise HTTPException(status_code=502, detail=str(e))
@@ -271,12 +280,36 @@ async def weather_advisory(
 
 
 # ── 5. Chatbot (WebSocket) ─────────────────────────────────────────────────
+# Lightweight per-connection guard so a single WS can't hammer the (paid) Gemini
+# endpoint. The /api/chatbot socket is intentionally unauthenticated (public),
+# so we cap messages and enforce a minimum interval here.
+WS_MAX_MESSAGES = 100
+WS_MIN_INTERVAL_SECONDS = 1.0
+
+
 @router.websocket("/api/chatbot")
 async def chatbot_ws(websocket: WebSocket):
     await websocket.accept()
+    msg_count = 0
+    last_msg_ts = 0.0
     try:
         while True:
             raw = await websocket.receive_text()
+            now = time.monotonic()
+            if now - last_msg_ts < WS_MIN_INTERVAL_SECONDS:
+                await websocket.send_json(
+                    {"type": "error", "message": "Please wait a moment before sending another message."}
+                )
+                continue
+            last_msg_ts = now
+            msg_count += 1
+            if msg_count > WS_MAX_MESSAGES:
+                await websocket.send_json(
+                    {"type": "error", "message": "Session message limit reached. Please refresh to continue."}
+                )
+                await websocket.close()
+                return
+
             data = json.loads(raw)
 
             msg_type = data.get("type", "message")

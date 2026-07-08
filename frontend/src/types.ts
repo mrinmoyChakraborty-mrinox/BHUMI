@@ -10,12 +10,12 @@ export interface Message {
 export interface Scheme {
   id: string;
   name: string;
-  nameLocal: { hi: string; bn: string };
+  nameLocal: { hi: string; bn: string; te: string };
   ministry: string;
   benefits: string;
-  benefitsLocal: { hi: string; bn: string };
+  benefitsLocal: { hi: string; bn: string; te: string };
   eligibility: string;
-  eligibilityLocal: { hi: string; bn: string };
+  eligibilityLocal: { hi: string; bn: string; te: string };
   howToApply: string;
   link: string;
   tag: "Direct Benefit" | "Insurance" | "Credit" | "Subsidy" | "Infrastructure";
