@@ -4,7 +4,7 @@ Shared FastAPI dependencies used across multiple routers.
 
 from typing import Optional
 
-from fastapi import Header, HTTPException, Request, status
+from fastapi import HTTPException, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from twilio.request_validator import RequestValidator
@@ -14,8 +14,7 @@ from app.config import get_settings
 settings = get_settings()
 _twilio_validator: Optional[RequestValidator] = None
 
-# Global rate limiter — wired into main.py via add_middleware
-limiter = Limiter(key_func=get_client_ip)
+
 
 
 def get_client_ip(request: Request) -> str:
@@ -33,6 +32,10 @@ def get_client_ip(request: Request) -> str:
         if real_ip:
             return real_ip.strip()
     return get_remote_address(request)
+
+
+# Global rate limiter — wired into main.py via add_middleware
+limiter = Limiter(key_func=get_client_ip)
 
 
 def get_twilio_validator() -> RequestValidator:

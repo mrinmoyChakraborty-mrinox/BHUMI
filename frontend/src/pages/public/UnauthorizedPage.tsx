@@ -20,7 +20,7 @@ export default function UnauthorizedPage() {
             Go to Dashboard
           </Link>
           <Link
-            to="/"
+            to="/app"
             className="px-5 py-2.5 text-xs font-bold font-mono bg-white border-2 border-stone-900 rounded-xl shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] hover:bg-stone-50"
           >
             Public Portal

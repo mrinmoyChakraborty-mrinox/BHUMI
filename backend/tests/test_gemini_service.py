@@ -1,10 +1,9 @@
 """Unit tests for app/services/gemini_service.py — mocks the HTTP call."""
 
 import json
-from unittest.mock import ANY, patch
+from unittest.mock import patch
 
 import pytest
-import requests
 
 from app.services.gemini_service import (
     GeminiError,

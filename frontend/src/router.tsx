@@ -5,6 +5,7 @@ import PublicLayout from "./layouts/PublicLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
 import AdminLayout from "./layouts/AdminLayout";
 
+import LandingPage from "./pages/public/LandingPage";
 import PublicHomePage from "./pages/public/PublicHomePage";
 import LoginPage from "./pages/public/LoginPage";
 import UnauthorizedPage from "./pages/public/UnauthorizedPage";
@@ -37,11 +38,27 @@ function SuspenseWrapper({ children }: { children: ReactNode }) {
 export const router = createBrowserRouter([
   {
     path: "/",
+    element: <SuspenseWrapper><LandingPage /></SuspenseWrapper>,
+  },
+  {
+    path: "/app",
     element: <SuspenseWrapper><PublicLayout /></SuspenseWrapper>,
     children: [
       { index: true, element: <SuspenseWrapper><PublicHomePage /></SuspenseWrapper> },
-      { path: "login", element: <SuspenseWrapper><LoginPage /></SuspenseWrapper> },
-      { path: "unauthorized", element: <SuspenseWrapper><UnauthorizedPage /></SuspenseWrapper> },
+    ],
+  },
+  {
+    path: "/login",
+    element: <SuspenseWrapper><PublicLayout /></SuspenseWrapper>,
+    children: [
+      { index: true, element: <SuspenseWrapper><LoginPage /></SuspenseWrapper> },
+    ],
+  },
+  {
+    path: "/unauthorized",
+    element: <SuspenseWrapper><PublicLayout /></SuspenseWrapper>,
+    children: [
+      { index: true, element: <SuspenseWrapper><UnauthorizedPage /></SuspenseWrapper> },
     ],
   },
   {

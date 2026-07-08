@@ -28,7 +28,6 @@ async def voice_response(
     resolved_alert_id = alert_id or _find_alert_by_call_sid(CallSid)
 
     if resolved_alert_id:
-        meaning = DIGIT_MEANING.get(Digits, "unrecognized")
         new_status = "acknowledged" if Digits in DIGIT_MEANING else "no_response"
         db.collection(COLLECTION).document(resolved_alert_id).update(
             {

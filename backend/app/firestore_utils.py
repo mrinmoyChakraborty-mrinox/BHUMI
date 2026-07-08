@@ -1,4 +1,3 @@
-from typing import Optional
 from fastapi import HTTPException
 from google.cloud.firestore_v1 import DocumentSnapshot
 
