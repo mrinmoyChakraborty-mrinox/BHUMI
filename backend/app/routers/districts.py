@@ -1,32 +1,38 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.firebase_client import db
-from app.firestore_utils import doc_to_dict, get_or_404, clean_update
+from app.reference_data_service import (
+    ReferenceDataError,
+    list_districts as pg_list_districts,
+    get_district as pg_get_district,
+    create_district as pg_create_district,
+    update_district as pg_update_district,
+    delete_district as pg_delete_district,
+)
 from app.schemas import DistrictCreate, DistrictUpdate, DistrictOut
 from app.auth import require_admin
 
 router = APIRouter(prefix="/districts", tags=["Districts"])
-COLLECTION = "districts"
+
+
+def _pg_err(e: ReferenceDataError):
+    raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.get("", response_model=dict)
 def list_districts(limit: int = 50, start_after: str | None = None):
-    query = db.collection(COLLECTION)
-    if start_after:
-        cursor_doc = db.collection(COLLECTION).document(start_after).get()
-        if cursor_doc.exists:
-            query = query.start_after(cursor_doc)
-    limit = min(limit, 200)
-    docs = query.limit(limit).stream()
-    items = [doc_to_dict(d) for d in docs]
-    next_cursor = items[-1]["id"] if len(items) == limit else None
-    return {"items": items, "next_cursor": next_cursor}
+    try:
+        return pg_list_districts(limit=limit, start_after=start_after)
+    except ReferenceDataError as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @router.get("/{district_id}", response_model=DistrictOut)
 def get_district(district_id: str):
-    return get_or_404(db.collection(COLLECTION), district_id, "District")
+    try:
+        return pg_get_district(district_id)
+    except ReferenceDataError as e:
+        _pg_err(e)
 
 
 @router.post(
@@ -38,23 +44,25 @@ def get_district(district_id: str):
 def create_district(payload: DistrictCreate):
     data = payload.model_dump()
     data["created_at"] = datetime.now(timezone.utc)
-    ref = db.collection(COLLECTION).document()
-    ref.set(data)
-    return doc_to_dict(ref.get())
+    try:
+        return pg_create_district(data)
+    except ReferenceDataError as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @router.patch(
     "/{district_id}", response_model=DistrictOut, dependencies=[Depends(require_admin)]
 )
 def update_district(district_id: str, payload: DistrictUpdate):
-    get_or_404(db.collection(COLLECTION), district_id, "District")
-    updates = clean_update(payload.model_dump())
-    if updates:
-        db.collection(COLLECTION).document(district_id).update(updates)
-    return doc_to_dict(db.collection(COLLECTION).document(district_id).get())
+    try:
+        return pg_update_district(district_id, payload.model_dump(exclude_none=True))
+    except ReferenceDataError as e:
+        _pg_err(e)
 
 
 @router.delete("/{district_id}", status_code=204, dependencies=[Depends(require_admin)])
 def delete_district(district_id: str):
-    get_or_404(db.collection(COLLECTION), district_id, "District")
-    db.collection(COLLECTION).document(district_id).delete()
+    try:
+        pg_delete_district(district_id)
+    except ReferenceDataError as e:
+        _pg_err(e)

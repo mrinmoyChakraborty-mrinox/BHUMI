@@ -5,6 +5,10 @@ from app.firebase_client import db
 from app.firestore_utils import doc_to_dict, get_or_404, clean_update
 from app.schemas import WardCreate, WardUpdate, WardOut
 from app.auth import require_admin
+from app.reference_data_service import (
+    ReferenceDataError,
+    sync_ward_defaults_to_firestore,
+)
 from app.services.weather_service import get_forecast_dry_days, WeatherServiceError
 
 router = APIRouter(prefix="/wards", tags=["Wards"])
@@ -67,6 +71,28 @@ def update_ward(ward_id: str, payload: WardUpdate):
 def delete_ward(ward_id: str):
     get_or_404(db.collection(COLLECTION), ward_id, "Ward")
     db.collection(COLLECTION).document(ward_id).delete()
+
+
+@router.post(
+    "/{ward_id}/sync-reference-data",
+    response_model=WardOut,
+    dependencies=[Depends(require_admin)],
+)
+def sync_reference_data(ward_id: str):
+    """Pulls static reference fields from Postgres (soil_type, avg_rainfall_mm,
+    groundwater_depth_m) into the Firestore ward_data doc, without overwriting
+    any fields that already have a manual/admin-set value."""
+    ward = get_or_404(db.collection(COLLECTION), ward_id, "Ward")
+    district_id = ward.get("district_id")
+    if not district_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Ward has no district_id set — cannot look up reference data",
+        )
+    try:
+        return sync_ward_defaults_to_firestore(ward_id, district_id)
+    except ReferenceDataError as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @router.post("/{ward_id}/refresh-forecast", response_model=WardOut)

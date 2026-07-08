@@ -27,13 +27,20 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     admin_bootstrap_uids: str = ""
 
+    # Google Maps
+    google_maps_api_key: str = ""
+
     # Rate limiting (per-IP)
     rate_limit_default: str = "30/minute"
     rate_limit_alert_trigger: str = "5/minute"
     rate_limit_health_log: str = "10/minute"
+    rate_limit_public_portal: str = "10/minute"
 
     # Idempotency (minutes to block duplicate alert triggers for the same plot+type)
     idempotency_window_minutes: int = 30
+
+    # Postgres / Supabase (reference data — districts, LGD, SHC, crop calendar)
+    database_url: str = ""
 
     # Upload limits
     max_image_size_mb: int = 8

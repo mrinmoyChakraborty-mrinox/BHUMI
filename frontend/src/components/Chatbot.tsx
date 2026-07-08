@@ -1,148 +1,151 @@
-import { useState, useEffect, useRef } from "react";
-import { Send, Mic, MicOff, Volume2, VolumeX, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Send, Mic, MicOff, Volume2, VolumeX, Loader2, RefreshCw, Sparkles, Wifi, WifiOff } from "lucide-react";
+import { getWsUrl } from "../config/env";
 import { Message, Language } from "../types";
 
 interface ChatbotProps {
   language: Language;
 }
 
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-1.5 px-1">
+      <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+      <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+      <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+    </div>
+  );
+}
+
 export default function Chatbot({ language }: ChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
-  
+
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize Web Speech API for voice recognition (Speech-to-Text)
+  const connect = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    try {
+      const ws = new WebSocket(getWsUrl());
+      ws.onopen = () => setIsConnected(true);
+      ws.onclose = () => {
+        setIsConnected(false);
+        setIsTyping(false);
+        reconnectTimer.current = setTimeout(connect, 3000);
+      };
+      ws.onerror = () => ws.close();
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "typing") {
+            setIsTyping(true);
+          } else if (data.type === "response") {
+            setIsTyping(false);
+            const modelMsg: Message = {
+              id: Math.random().toString(),
+              role: "model",
+              text: data.text,
+              timestamp: new Date(),
+            };
+            setMessages((prev) => [...prev, modelMsg]);
+            if (autoSpeak) speakText(data.text);
+          } else if (data.type === "error") {
+            setIsTyping(false);
+            alert(data.message || "Chatbot error");
+          }
+        } catch {}
+      };
+      wsRef.current = ws;
+    } catch {}
+  }, [autoSpeak]);
+
+  useEffect(() => {
+    connect();
+    return () => {
+      clearTimeout(reconnectTimer.current);
+      wsRef.current?.close();
+    };
+  }, [connect]);
+
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       const rec = new SpeechRecognition();
       rec.continuous = false;
       rec.interimResults = false;
-      
-      // Match language code for recognition
       rec.lang = language === "hi" ? "hi-IN" : language === "bn" ? "bn-IN" : "en-IN";
-
-      rec.onstart = () => {
-        setIsListening(true);
-      };
-
+      rec.onstart = () => setIsListening(true);
       rec.onresult = (e: any) => {
         const transcript = e.results[0][0].transcript;
-        if (transcript) {
-          setInput(transcript);
-        }
+        if (transcript) setInput(transcript);
       };
-
-      rec.onerror = (e: any) => {
-        console.error("Speech Recognition Error:", e);
-        setIsListening(false);
-      };
-
-      rec.onend = () => {
-        setIsListening(false);
-      };
-
+      rec.onerror = () => setIsListening(false);
+      rec.onend = () => setIsListening(false);
       setRecognition(rec);
     }
   }, [language]);
 
-  // Handle auto-scroll to latest message
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  // Add initial greeting based on selected language
   useEffect(() => {
     const greetings = {
       en: "Namaste! I am your Krishi AI Assistant. How can I help you with your crop cycle, soil health, weather, or government schemes today?",
       hi: "नमस्ते! मैं आपका कृषि एआई सहायक हूँ। आज मैं आपकी फसल चक्र, मिट्टी के स्वास्थ्य, मौसम या सरकारी योजनाओं में किस प्रकार मदद कर सकता हूँ?",
-      bn: "নমস্কার! আমি আপনার কৃষি এআই সহকারী। আজ আমি আপনার ফসল চক্র, মাটির স্বাস্থ্য, আবহাওয়া বা সরকারী প্রকল্পগুলিতে কীভাবে সহায়তা করতে পারি?"
+      bn: "নমস্কার! আমি আপনার কৃষি এআই সহকারী। আজ আমি আপনার ফসল চক্র, মাটির স্বাস্থ্য, আবহাওয়া বা সরকারী প্রকল্পগুলিতে কীভাবে সহায়তা করতে পারি?",
     };
-    
-    setMessages([
-      {
-        id: "greet",
-        role: "model",
-        text: greetings[language],
-        timestamp: new Date()
-      }
-    ]);
+    setMessages([{
+      id: "greet",
+      role: "model",
+      text: greetings[language],
+      timestamp: new Date(),
+    }]);
   }, [language]);
 
-  const handleSend = async (textToSend?: string) => {
+  const sendMessage = useCallback((textToSend?: string) => {
     const text = textToSend || input;
-    if (!text.trim()) return;
+    if (!text.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
 
-    // Create user message
     const userMsg: Message = {
       id: Math.random().toString(),
       role: "user",
-      text: text,
-      timestamp: new Date()
+      text,
+      timestamp: new Date(),
     };
-
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    setLoading(true);
 
-    try {
-      // Map history for API
-      const historyPayload = messages.slice(1).map(msg => ({
-        role: msg.role,
-        text: msg.text
-      }));
+    const historyPayload = messages.slice(1).map((msg) => ({
+      role: msg.role,
+      text: msg.text,
+    }));
 
-      const response = await fetch("/api/chatbot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          history: historyPayload,
-          language,
-          location: "Nadia, West Bengal"
-        })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        const modelMsg: Message = {
-          id: Math.random().toString(),
-          role: "model",
-          text: data.response,
-          timestamp: new Date()
-        };
-        setMessages((prev) => [...prev, modelMsg]);
-        
-        // Trigger auto speak if selected
-        if (autoSpeak) {
-          speakText(data.response);
-        }
-      } else {
-        alert(data.error || "Chatbot failed to respond");
-      }
-    } catch (err: any) {
-      alert("Error: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    wsRef.current.send(JSON.stringify({
+      type: "message",
+      message: text,
+      history: historyPayload,
+      language,
+      location: "Nadia, West Bengal",
+    }));
+  }, [input, messages, language]);
 
   const toggleListen = () => {
     if (!recognition) {
       alert("Speech recognition is not supported in this browser. Please try Chrome/Safari.");
       return;
     }
-
     if (isListening) {
       recognition.stop();
     } else {
-      // Stop any active text synthesis before recording
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
       recognition.start();
@@ -150,30 +153,22 @@ export default function Chatbot({ language }: ChatbotProps) {
   };
 
   const speakText = (text: string) => {
-    // If speaking, toggle stop
     if (isSpeaking) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
       return;
     }
-
-    const cleanText = text.replace(/[*#`_\-]/g, ""); // strip markdown formatting for cleaner audio
+    const cleanText = text.replace(/[*#`_\-]/g, "");
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    
-    // Configure voice properties
     utterance.lang = language === "hi" ? "hi-IN" : language === "bn" ? "bn-IN" : "en-IN";
-    utterance.rate = 0.95; // slightly slower for better farmer intelligibility
-    
+    utterance.rate = 0.95;
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
-
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleSuggestionClick = (query: string) => {
-    handleSend(query);
-  };
+  const handleSuggestionClick = (query: string) => sendMessage(query);
 
   const labels = {
     en: {
@@ -208,27 +203,26 @@ export default function Chatbot({ language }: ChatbotProps) {
       s1: "ধানের জন্য সেরা সার সুপারিশ করুন",
       s2: "পিএম কিষাণ কিস্তির যোগ্যতা",
       s3: "পাতার মরিচা রোগের জৈব প্রতিকার",
-    }
+    },
   }[language];
 
   return (
     <div className="flex flex-col h-[520px] bg-white border-2 border-stone-900 rounded-3xl shadow-[4px_4px_0px_0px_rgba(28,25,23,1)] overflow-hidden" id="chatbot-container">
-      {/* Mini header controls */}
       <div className="bg-stone-50 border-b-2 border-stone-900 px-4 py-3 flex items-center justify-between" id="chat-header">
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping shrink-0" />
+          {isConnected ? (
+            <Wifi className="w-3.5 h-3.5 text-emerald-500" />
+          ) : (
+            <WifiOff className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+          )}
           <span className="font-display font-black text-stone-900 text-sm">Krishi AI Assistant</span>
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* TTS Toggle */}
           <button
             onClick={() => {
               setAutoSpeak(!autoSpeak);
-              if (autoSpeak) {
-                window.speechSynthesis.cancel();
-                setIsSpeaking(false);
-              }
+              if (autoSpeak) { window.speechSynthesis.cancel(); setIsSpeaking(false); }
             }}
             className={`p-1.5 rounded-xl border-2 border-stone-900 text-xs font-mono font-bold flex items-center gap-1.5 transition shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] cursor-pointer ${
               autoSpeak ? "bg-amber-400 text-stone-900" : "bg-white text-stone-700 hover:bg-stone-50"
@@ -238,8 +232,7 @@ export default function Chatbot({ language }: ChatbotProps) {
             <span className="hidden sm:inline">{labels.voiceMute}</span>
           </button>
 
-          {/* Reset */}
-          <button 
+          <button
             onClick={() => setMessages([messages[0]])}
             className="p-1.5 text-stone-800 hover:bg-stone-50 border-2 border-stone-900 rounded-xl transition shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] cursor-pointer"
             title="Reset Chat"
@@ -249,26 +242,22 @@ export default function Chatbot({ language }: ChatbotProps) {
         </div>
       </div>
 
-      {/* Messages body */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-stone-50/40" id="chat-messages-scroller">
         {messages.map((msg) => (
-          <div 
-            key={msg.id}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div 
+          <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div
               className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] border-2 border-stone-900 ${
-                msg.role === "user" 
-                  ? "bg-emerald-600 text-white rounded-tr-none font-bold" 
+                msg.role === "user"
+                  ? "bg-emerald-600 text-white rounded-tr-none font-bold"
                   : "bg-white text-stone-900 rounded-tl-none whitespace-pre-wrap leading-relaxed font-medium"
               }`}
             >
               <div>{msg.text}</div>
-              
+
               {msg.role === "model" && (
                 <div className="flex justify-between items-center mt-2.5 pt-2 border-t-2 border-stone-100 text-[10px] text-stone-500 font-mono">
                   <span>{msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  <button 
+                  <button
                     onClick={() => speakText(msg.text)}
                     className={`flex items-center gap-1 px-2 py-0.5 rounded border border-stone-900 transition cursor-pointer font-bold ${
                       isSpeaking ? "bg-red-500 text-white animate-pulse" : "bg-amber-100 text-stone-950 hover:bg-amber-200"
@@ -283,16 +272,14 @@ export default function Chatbot({ language }: ChatbotProps) {
           </div>
         ))}
 
-        {loading && (
+        {isTyping && (
           <div className="flex justify-start">
-            <div className="bg-white border-2 border-stone-900 rounded-2xl px-4 py-3 text-sm shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] flex items-center gap-2 text-stone-700 rounded-tl-none font-bold font-mono">
-              <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
-              <span>Analyzing agronomic database...</span>
+            <div className="bg-white border-2 border-stone-900 rounded-2xl px-5 py-3.5 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] rounded-tl-none">
+              <TypingDots />
             </div>
           </div>
         )}
 
-        {/* Suggestion tags if chat is starting */}
         {messages.length === 1 && (
           <div className="space-y-3 pt-4" id="chat-suggestions-tag">
             <div className="text-xs font-bold text-stone-700 flex items-center gap-1 font-mono uppercase tracking-wider">
@@ -300,19 +287,19 @@ export default function Chatbot({ language }: ChatbotProps) {
               <span>{labels.suggestionHeader}</span>
             </div>
             <div className="flex flex-col gap-2.5">
-              <button 
+              <button
                 onClick={() => handleSuggestionClick(labels.s1)}
                 className="text-left bg-white border-2 border-stone-900 hover:border-emerald-600 p-3 rounded-xl text-xs text-stone-900 hover:bg-stone-50 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] transition font-bold cursor-pointer"
               >
                 🌾 {labels.s1}
               </button>
-              <button 
+              <button
                 onClick={() => handleSuggestionClick(labels.s2)}
                 className="text-left bg-white border-2 border-stone-900 hover:border-emerald-600 p-3 rounded-xl text-xs text-stone-900 hover:bg-stone-50 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] transition font-bold cursor-pointer"
               >
                 🏦 {labels.s2}
               </button>
-              <button 
+              <button
                 onClick={() => handleSuggestionClick(labels.s3)}
                 className="text-left bg-white border-2 border-stone-900 hover:border-emerald-600 p-3 rounded-xl text-xs text-stone-900 hover:bg-stone-50 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] transition font-bold cursor-pointer"
               >
@@ -324,13 +311,12 @@ export default function Chatbot({ language }: ChatbotProps) {
         <div ref={chatEndRef} />
       </div>
 
-      {/* Input container footer */}
       <div className="p-4 border-t-2 border-stone-900 bg-white flex gap-3" id="chat-inputs-form">
         <button
           onClick={toggleListen}
           className={`p-3 rounded-2xl border-2 border-stone-900 transition flex items-center justify-center shrink-0 cursor-pointer shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] ${
-            isListening 
-              ? "bg-red-500 text-white animate-pulse" 
+            isListening
+              ? "bg-red-500 text-white animate-pulse"
               : "bg-stone-50 text-stone-800 hover:bg-stone-100"
           }`}
           title="Speak your query"
@@ -338,19 +324,19 @@ export default function Chatbot({ language }: ChatbotProps) {
           {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
         </button>
 
-        <input 
+        <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           className="flex-1 bg-stone-50 border-2 border-stone-900 rounded-2xl px-4 py-2.5 text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
           placeholder={isListening ? "Listening..." : labels.inputPlaceholder}
           disabled={isListening}
         />
 
         <button
-          onClick={() => handleSend()}
-          disabled={!input.trim() || loading}
+          onClick={() => sendMessage()}
+          disabled={!input.trim() || !isConnected}
           className="p-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 border-2 border-stone-900 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] text-white flex items-center justify-center shrink-0 transition cursor-pointer"
         >
           <Send className="w-5 h-5" />

@@ -20,6 +20,7 @@ from app.routers import (
     health_logs,
     dashboard,
     admin,
+    public_portal,
 )
 from app.routers.deps import limiter
 
@@ -71,6 +72,7 @@ app.include_router(twilio_webhooks.router)
 app.include_router(health_logs.router)
 app.include_router(dashboard.router)
 app.include_router(admin.router)
+app.include_router(public_portal.router)
 
 # ── Global exception handler ─────────────────────────────────────────────
 
