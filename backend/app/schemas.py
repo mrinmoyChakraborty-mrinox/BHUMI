@@ -74,6 +74,7 @@ class FarmerCreate(BaseModel):
     ward_id: str = "general"
     state: Optional[str] = None
     district: Optional[str] = None
+    email: Optional[str] = None
 
     @validator("phone")
     def validate_phone(cls, v: str) -> str:
@@ -92,17 +93,22 @@ class FarmerUpdate(BaseModel):
 class FarmerOut(FarmerCreate):
     id: str
     created_at: Optional[datetime] = None
+    email: Optional[str] = None
 
 
 # ---------- Plots ----------
 class PlotCreate(BaseModel):
     farmer_id: str
-    ward_id: str
+    ward_id: str = "general"
     soil_type: Optional[str] = None
     groundwater_depth_m: Optional[float] = None
     avg_rainfall_mm: Optional[float] = None
     current_crop: Optional[str] = None
     crop_stage: Optional[str] = None  # sowing | vegetative | flowering | harvest
+    address: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    area_acre: Optional[float] = None
 
 
 class PlotUpdate(BaseModel):

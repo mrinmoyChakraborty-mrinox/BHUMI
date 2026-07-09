@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect, type FormEvent } from "react";
-import { Navigate, Link } from "react-router-dom";
+import { Navigate, Link, useNavigate } from "react-router-dom";
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signInWithPhoneNumber,
   RecaptchaVerifier,
   type ConfirmationResult,
@@ -48,7 +47,7 @@ const T = {
     password_label: "Password",
     password_placeholder: "Enter your password",
     sign_in_btn: "Sign In",
-    rsk_note: "RSK Officers — use Email login",
+    rsk_note: "RSK Officers & Admins — use Email login",
     reg_name: "Your Full Name",
     reg_name_hint: "As shown on your ID card",
     reg_phone: "Mobile Number",
@@ -56,9 +55,6 @@ const T = {
     reg_email: "Email Address",
     reg_email_hint: "Optional, for account recovery",
     reg_language: "Preferred Language",
-    reg_password: "Create Password",
-    reg_confirm: "Confirm Password",
-    reg_password_hint: "At least 6 characters",
     reg_state: "Your State",
     reg_state_placeholder: "Select your state",
     reg_district: "Your District",
@@ -77,6 +73,7 @@ const T = {
     error_otp_invalid: "That code is not correct. Please try again.",
     error_generic: "Something went wrong. Please try again.",
     error_network: "Could not connect. Check your internet and try again.",
+    error_name_required: "Please enter your full name to continue.",
     sending: "Sending...",
     verifying: "Verifying...",
     creating: "Creating account...",
@@ -86,6 +83,8 @@ const T = {
     join_title: "Join as a Farmer",
     otp_step1: "Enter your mobile number",
     otp_step2: "Enter the OTP sent to your phone",
+    profile_title: "Complete Your Profile",
+    profile_subtitle: "Just a few details so we can personalise your experience.",
   },
   hi: {
     brand: "भूमि कृषि AI",
@@ -113,7 +112,7 @@ const T = {
     password_label: "पासवर्ड",
     password_placeholder: "अपना पासवर्ड दर्ज करें",
     sign_in_btn: "साइन इन",
-    rsk_note: "RSK अधिकारी — ईमेल से लॉगिन करें",
+    rsk_note: "RSK अधिकारी और एडमिन — ईमेल से लॉगिन करें",
     reg_name: "आपका पूरा नाम",
     reg_name_hint: "जैसा आपके ID कार्ड पर है",
     reg_phone: "मोबाइल नंबर",
@@ -121,9 +120,6 @@ const T = {
     reg_email: "ईमेल पता",
     reg_email_hint: "वैकल्पिक, खाता रिकवरी के लिए",
     reg_language: "पसंदीदा भाषा",
-    reg_password: "पासवर्ड बनाएं",
-    reg_confirm: "पासवर्ड दोबारा लिखें",
-    reg_password_hint: "कम से कम 6 अक्षर",
     reg_state: "आपका राज्य",
     reg_state_placeholder: "अपना राज्य चुनें",
     reg_district: "आपका जिला",
@@ -142,6 +138,7 @@ const T = {
     error_otp_invalid: "कोड सही नहीं है। कृपया फिर से प्रयास करें।",
     error_generic: "कुछ गलत हो गया। कृपया फिर से प्रयास करें।",
     error_network: "कनेक्शन नहीं हो पाया। अपना इंटरनेट जांचें।",
+    error_name_required: "जारी रखने के लिए कृपया अपना पूरा नाम दर्ज करें।",
     sending: "भेज रहे हैं...",
     verifying: "जांच रहे हैं...",
     creating: "खाता बना रहे हैं...",
@@ -151,6 +148,8 @@ const T = {
     join_title: "किसान के रूप में जुड़ें",
     otp_step1: "अपना मोबाइल नंबर दर्ज करें",
     otp_step2: "फ़ोन पर आया OTP कोड दर्ज करें",
+    profile_title: "अपनी प्रोफाइल पूरी करें",
+    profile_subtitle: "कुछ जानकारी दें ताकि हम आपका अनुभव बेहतर बना सकें।",
   },
   bn: {
     brand: "ভূমি কৃষি AI",
@@ -178,7 +177,7 @@ const T = {
     password_label: "পাসওয়ার্ড",
     password_placeholder: "আপনার পাসওয়ার্ড দিন",
     sign_in_btn: "সাইন ইন",
-    rsk_note: "RSK অফিসার — ইমেল দিয়ে লগইন করুন",
+    rsk_note: "RSK অফিসার ও অ্যাডমিন — ইমেল দিয়ে লগইন করুন",
     reg_name: "আপনার পুরো নাম",
     reg_name_hint: "যেমন আপনার ID কার্ডে আছে",
     reg_phone: "মোবাইল নম্বর",
@@ -186,9 +185,6 @@ const T = {
     reg_email: "ইমেল ঠিকানা",
     reg_email_hint: "ঐচ্ছিক, অ্যাকাউন্ট পুনরুদ্ধারের জন্য",
     reg_language: "পছন্দের ভাষা",
-    reg_password: "পাসওয়ার্ড তৈরি করুন",
-    reg_confirm: "পাসওয়ার্ড নিশ্চিত করুন",
-    reg_password_hint: "অন্তত ৬ অক্ষর",
     reg_state: "আপনার রাজ্য",
     reg_state_placeholder: "আপনার রাজ্য নির্বাচন করুন",
     reg_district: "আপনার জেলা",
@@ -207,6 +203,7 @@ const T = {
     error_otp_invalid: "কোডটি সঠিক নয়। আবার চেষ্টা করুন।",
     error_generic: "কিছু ভুল হয়েছে। আবার চেষ্টা করুন।",
     error_network: "সংযোগ হয়নি। আপনার ইন্টারনেট চেক করুন।",
+    error_name_required: "চালিয়ে যেতে আপনার পুরো নাম লিখুন।",
     sending: "পাঠানো হচ্ছে...",
     verifying: "যাচাই করা হচ্ছে...",
     creating: "অ্যাকাউন্ট তৈরি হচ্ছে...",
@@ -216,6 +213,8 @@ const T = {
     join_title: "কৃষক হিসেবে যোগ দিন",
     otp_step1: "আপনার মোবাইল নম্বর দিন",
     otp_step2: "ফোনে আসা OTP কোড দিন",
+    profile_title: "আপনার প্রোফাইল পূরণ করুন",
+    profile_subtitle: "আমরা আপনার অভিজ্ঞতা ব্যক্তিগত করতে পারি এমন কিছু তথ্য দিন।",
   },
   te: {
     brand: "భూమి కృషి AI",
@@ -243,7 +242,7 @@ const T = {
     password_label: "పాస్‌వర్డ్",
     password_placeholder: "మీ పాస్‌వర్డ్ నమోదు చేయండి",
     sign_in_btn: "సైన్ ఇన్",
-    rsk_note: "RSK అధికారులు — ఇమెయిల్ ద్వారా లాగిన్ చేయండి",
+    rsk_note: "RSK అధికారులు & అడ్మిన్ — ఇమెయిల్ ద్వారా లాగిన్ చేయండి",
     reg_name: "మీ పూర్తి పేరు",
     reg_name_hint: "మీ ID కార్డ్‌లో ఉన్నట్లు",
     reg_phone: "మొబైల్ నంబర్",
@@ -251,9 +250,6 @@ const T = {
     reg_email: "ఇమెయిల్ చిరునామా",
     reg_email_hint: "ఐచ్ఛికం, ఖాతా పునరుద్ధరణ కోసం",
     reg_language: "ఇష్టపడే భాష",
-    reg_password: "పాస్‌వర్డ్ సృష్టించండి",
-    reg_confirm: "పాస్‌వర్డ్ నిర్ధారించండి",
-    reg_password_hint: "కనీసం 6 అక్షరాలు",
     reg_state: "మీ రాష్ట్రం",
     reg_state_placeholder: "మీ రాష్ట్రం ఎంచుకోండి",
     reg_district: "మీ జిల్లా",
@@ -272,6 +268,7 @@ const T = {
     error_otp_invalid: "ఆ కోడ్ సరైనది కాదు. దయచేసి మళ్ళీ ప్రయత్నించండి.",
     error_generic: "ఏదో తప్పు జరిగింది. దయచేసి మళ్ళీ ప్రయత్నించండి.",
     error_network: "కనెక్ట్ కాలేదు. మీ ఇంటర్నెట్ తనిఖీ చేయండి.",
+    error_name_required: "కొనసాగించడానికి దయచేసి మీ పూర్తి పేరు నమోదు చేయండి.",
     sending: "పంపుతోంది...",
     verifying: "ధృవీకరిస్తోంది...",
     creating: "ఖాతా సృష్టిస్తోంది...",
@@ -281,6 +278,8 @@ const T = {
     join_title: "రైతుగా చేరండి",
     otp_step1: "మీ మొబైల్ నంబర్ నమోదు చేయండి",
     otp_step2: "ఫోన్‌కు వచ్చిన OTP కోడ్ నమోదు చేయండి",
+    profile_title: "మీ ప్రొఫైల్‌ను పూర్తి చేయండి",
+    profile_subtitle: "మేము మీ అనుభవాన్ని వ్యక్తిగతం చేయడానికి కొన్ని వివరాలు ఇవ్వండి.",
   },
 };
 
@@ -297,6 +296,7 @@ const INDIAN_STATES = [
 
 type AuthMode = "login" | "register";
 type LoginMethod = "phone" | "email";
+type PhoneStep = "input" | "otp" | "profile";
 
 function getErrorMessage(err: unknown, t: typeof T.en): string {
   if (!err) return t.error_generic;
@@ -306,29 +306,32 @@ function getErrorMessage(err: unknown, t: typeof T.en): string {
   if (msg.includes("auth/too-many-requests")) return "Too many attempts. Please wait a minute and try again.";
   if (msg.includes("auth/user-not-found") || msg.includes("auth/wrong-password")) return "Email or password is incorrect.";
   if (msg.includes("auth/email-already-in-use")) return "This email is already registered. Try signing in.";
+  if (msg.includes("auth/invalid-phone-number")) return "Please enter a valid 10-digit mobile number.";
+  if (msg.includes("auth/captcha-check-failed")) return "Verification failed. Please try again.";
   return msg || t.error_generic;
 }
 
 export default function LoginPage() {
-  const { user, loading: authLoading, loginRedirect, setLoginRedirect, setFarmerProfile } = useAuthContext();
-  const recaptchaRef = useRef<HTMLDivElement>(null);
+  const { user, role, loading: authLoading, loginRedirect, setLoginRedirect, setFarmerProfile } = useAuthContext();
+  const navigate = useNavigate();
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+  const initialHandled = useRef(false);
   const [lang, setLang] = useState<Language>("en");
   const t = T[lang];
 
   const [mode, setMode] = useState<AuthMode>("login");
   const [loginMethod, setLoginMethod] = useState<LoginMethod>("phone");
+  const [phoneStep, setPhoneStep] = useState<PhoneStep>("input");
 
   // Login fields
   const [phoneLogin, setPhoneLogin] = useState("");
   const [emailLogin, setEmailLogin] = useState("");
   const [passwordLogin, setPasswordLogin] = useState("");
 
-  // Register fields
+  // Register / profile fields
   const [regName, setRegName] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regEmail, setRegEmail] = useState("");
-  const [regPassword, setRegPassword] = useState("");
-  const [regConfirm, setRegConfirm] = useState("");
   const [regLanguage, setRegLanguage] = useState("en");
   const [regState, setRegState] = useState("");
   const [regDistrict, setRegDistrict] = useState("");
@@ -337,37 +340,22 @@ export default function LoginPage() {
 
   // OTP fields
   const [otpCode, setOtpCode] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [otpPhone, setOtpPhone] = useState("");
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [recaptchaReady, setRecaptchaReady] = useState(false);
-  const [redirectTo, setRedirectTo] = useState<string | null>(null);
 
+  // If the user is already authenticated when landing here, send them on.
   useEffect(() => {
-    if (!auth) return;
-    try {
-      const verifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-        size: "invisible",
-      });
-      verifier.render().then(() => setRecaptchaReady(true));
-      return () => { verifier.clear(); };
-    } catch {
-      setRecaptchaReady(true);
-    }
-  }, []);
-
-  // Redirect once if already logged in and no auth flow is in progress
-  const hasPendingAuthFlow = submitting || otpSent || confirmationResult !== null || regPhone !== "";
-  useEffect(() => {
-    if (user && !hasPendingAuthFlow && !authLoading) {
-      setRedirectTo(loginRedirect || "/app");
-      setLoginRedirect(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!user, authLoading]);
+    if (authLoading || !user) return;
+    if (initialHandled.current) return;
+    if (role === null) return; // wait until the role has been resolved
+    initialHandled.current = true;
+    const dest = loginRedirect || (role === "farmer" ? "/farmer" : "/dashboard");
+    setLoginRedirect(null);
+    navigate(dest, { replace: true });
+  }, [user, role, authLoading, loginRedirect, navigate, setLoginRedirect]);
 
   if (authLoading) {
     return (
@@ -377,23 +365,74 @@ export default function LoginPage() {
     );
   }
 
-  if (redirectTo) {
-    return <Navigate to={redirectTo} replace />;
+  // Lazily (re)create the invisible reCAPTCHA verifier right before it is
+  // needed. Clearing any previous instance first avoids the
+  // "reCAPTCHA has already been rendered in this element" error that occurs
+  // when a verifier is created on mount (e.g. under React StrictMode).
+  async function makeVerifier(): Promise<RecaptchaVerifier> {
+    if (!auth) throw new Error("auth-unavailable");
+    if (recaptchaVerifierRef.current) {
+      try {
+        recaptchaVerifierRef.current.clear();
+      } catch {
+        // ignore
+      }
+      recaptchaVerifierRef.current = null;
+    }
+    const verifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+      size: "invisible",
+    });
+    await verifier.render();
+    recaptchaVerifierRef.current = verifier;
+    return verifier;
   }
 
-  const handlePhoneOtp = async () => {
-    if (!auth || !recaptchaReady) return;
+  useEffect(() => {
+    return () => {
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+        } catch {
+          // ignore
+        }
+        recaptchaVerifierRef.current = null;
+      }
+    };
+  }, []);
+
+  const resetPhoneFlow = () => {
+    setPhoneStep("input");
+    setOtpCode("");
+    setConfirmationResult(null);
+    setOtpPhone("");
+    setError("");
+  };
+
+  const switchMode = (m: AuthMode) => {
+    setMode(m);
+    setError("");
+    resetPhoneFlow();
+    if (m === "register") setLoginMethod("phone");
+  };
+
+  const handleSendOtp = async () => {
+    if (!auth) {
+      setError("Login service is unavailable right now. Please try again later.");
+      return;
+    }
+    if (phoneLogin.replace(/\D/g, "").length !== 10) {
+      setError("Please enter a valid 10-digit mobile number.");
+      return;
+    }
     setError("");
     setSubmitting(true);
     try {
       const phoneNumber = `+91${phoneLogin.replace(/\s/g, "")}`;
-      const verifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-        size: "invisible",
-      });
+      const verifier = await makeVerifier();
       const result = await signInWithPhoneNumber(auth, phoneNumber, verifier);
       setConfirmationResult(result);
-      setOtpSent(true);
       setOtpPhone(phoneNumber);
+      setPhoneStep("otp");
     } catch (err: unknown) {
       setError(getErrorMessage(err, t));
     } finally {
@@ -401,27 +440,28 @@ export default function LoginPage() {
     }
   };
 
-  const handleOtpConfirm = async () => {
+  const handleVerifyOtp = async () => {
     if (!confirmationResult) return;
     setError("");
     setSubmitting(true);
     try {
       await confirmationResult.confirm(otpCode);
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 600));
       const phone = encodeURIComponent(otpPhone);
       const res = await fetch(`${API_BASE_URL}/farmers/by-phone/${phone}`);
       if (res.ok) {
-        const profile: FarmerOut = await res.json();
-        if (profile) {
+        const profile: FarmerOut | null = await res.json();
+        if (profile && profile.id) {
           setFarmerProfile(profile);
-          setRedirectTo("/app");
+          const dest = loginRedirect || "/farmer";
+          setLoginRedirect(null);
+          navigate(dest, { replace: true });
           return;
         }
       }
+      // No farmer record yet — collect profile details to finish signup.
       setRegPhone(otpPhone);
-      setMode("register");
-      setOtpSent(false);
-      setConfirmationResult(null);
+      setPhoneStep("profile");
     } catch (err: unknown) {
       setError(getErrorMessage(err, t));
     } finally {
@@ -431,12 +471,17 @@ export default function LoginPage() {
 
   const handleEmailLogin = async (e: FormEvent) => {
     e.preventDefault();
-    if (!auth) return;
+    if (!auth) {
+      setError("Login service is unavailable right now. Please try again later.");
+      return;
+    }
     setError("");
     setSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, emailLogin, passwordLogin);
-      setRedirectTo("/dashboard");
+      const dest = loginRedirect || "/dashboard";
+      setLoginRedirect(null);
+      navigate(dest, { replace: true });
     } catch (err: unknown) {
       setError(getErrorMessage(err, t));
     } finally {
@@ -444,41 +489,43 @@ export default function LoginPage() {
     }
   };
 
-  const handleRegister = async (e: FormEvent) => {
+  const handleProfileComplete = async (e: FormEvent) => {
     e.preventDefault();
-    if (!auth) return;
+    if (!auth?.currentUser) return;
     setError("");
 
-    if (regPassword !== regConfirm) {
-      setError(t.error_password_mismatch);
-      return;
-    }
-    if (regPassword.length < 6) {
-      setError(t.error_password_short);
+    if (!regName.trim()) {
+      setError(t.error_name_required);
       return;
     }
 
     setSubmitting(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, regEmail, regPassword);
-      const token = await cred.user.getIdToken();
-      const authHeaders = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+      const token = await auth.currentUser.getIdToken();
+      const authHeaders = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
 
-      const cleanedPhone = regPhone.startsWith("+91") ? regPhone : `+91${regPhone.replace(/\s/g, "")}`;
+      const cleanedPhone = regPhone.startsWith("+")
+        ? regPhone
+        : `+91${regPhone.replace(/\s/g, "")}`;
+
       const farmer = await apiRequest<FarmerOut>("/farmers", {
         method: "POST",
         headers: authHeaders,
         body: {
-          name: regName,
+          name: regName.trim(),
           phone: cleanedPhone,
           preferred_language: regLanguage,
           state: regState || undefined,
           district: regDistrict || undefined,
+          email: regEmail.trim() || undefined,
         },
       });
 
       if (farmer.id) {
-        const plotPayload: Partial<PlotCreate> = { farmer_id: farmer.id };
+        const plotPayload: Partial<PlotCreate> = { farmer_id: farmer.id, ward_id: "general" };
         if (regCrop) plotPayload.current_crop = regCrop;
         if (regSoil) plotPayload.soil_type = regSoil;
         try {
@@ -493,7 +540,9 @@ export default function LoginPage() {
       }
 
       setFarmerProfile(farmer);
-      setRedirectTo("/app");
+      const dest = loginRedirect || "/farmer";
+      setLoginRedirect(null);
+      navigate(dest, { replace: true });
     } catch (err: unknown) {
       setError(getErrorMessage(err, t));
     } finally {
@@ -504,6 +553,8 @@ export default function LoginPage() {
   const LANG_LABELS: Record<Language, string> = {
     en: "EN", hi: "हिन्दी", bn: "বাংলা", te: "తెలుగు",
   };
+
+  const isRegister = mode === "register";
 
   return (
     <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-8 px-4">
@@ -569,13 +620,13 @@ export default function LoginPage() {
           {/* Step indicator + mode tabs */}
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-display font-black text-stone-900">
-              {mode === "login" ? t.welcome_back : t.join_title}
+              {isRegister ? t.join_title : t.welcome_back}
             </h3>
             <div className="flex border-2 border-stone-200 rounded-xl p-0.5">
               {(["login", "register"] as const).map((m) => (
                 <button
                   key={m}
-                  onClick={() => { setMode(m); setError(""); setOtpSent(false); }}
+                  onClick={() => switchMode(m)}
                   className={`px-4 py-2 text-[11px] font-bold rounded-lg transition cursor-pointer ${
                     mode === m ? "bg-emerald-600 text-white shadow-sm" : "text-stone-400 hover:text-stone-700"
                   }`}
@@ -594,164 +645,14 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* ── LOGIN ──────────────────────────────────────────── */}
-          {mode === "login" && (
-            <>
-              {/* Login method toggle */}
-              <div className="flex gap-2 mb-6">
-                {(["phone", "email"] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => { setLoginMethod(m); setError(""); setOtpSent(false); }}
-                    className={`flex-1 py-3 text-xs font-bold rounded-2xl border-2 flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                      loginMethod === m
-                        ? "bg-emerald-50 border-emerald-600 text-emerald-800 shadow-[2px_2px_0px_0px_rgba(5,150,105,1)]"
-                        : "bg-white border-stone-200 text-stone-500 hover:border-stone-400"
-                    }`}
-                  >
-                    {m === "phone" ? <Smartphone className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
-                    {m === "phone" ? t.login_phone : t.login_email}
-                  </button>
-                ))}
+          {/* ── PROFILE COMPLETION (signup step 3) ───────────────── */}
+          {phoneStep === "profile" ? (
+            <form onSubmit={handleProfileComplete} className="space-y-3.5">
+              <div className="mb-1">
+                <h4 className="text-sm font-display font-black text-stone-900">{t.profile_title}</h4>
+                <p className="text-[11px] text-stone-400">{t.profile_subtitle}</p>
               </div>
 
-              {/* ── Phone login (step 1: phone input) ── */}
-              {loginMethod === "phone" && !otpSent && (
-                <form onSubmit={(e) => { e.preventDefault(); handlePhoneOtp(); }} className="space-y-5">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">1</span>
-                      <label className="text-xs font-bold text-stone-600">{t.otp_step1}</label>
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                      <div className="bg-stone-100 border-2 border-stone-300 rounded-2xl px-4 flex items-center text-sm font-bold text-stone-500 shrink-0">
-                        +91
-                      </div>
-                      <input
-                        type="tel"
-                        inputMode="numeric"
-                        value={phoneLogin}
-                        onChange={(e) => setPhoneLogin(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                        placeholder={t.mobile_placeholder}
-                        className="w-full py-3 px-4 text-base bg-white border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-bold transition"
-                        required
-                        autoFocus
-                      />
-                    </div>
-                    <p className="mt-1.5 text-xs text-stone-400 flex items-center gap-1">
-                      <MessageSquare className="w-3 h-3" />
-                      {t.mobile_hint}
-                    </p>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={submitting || !recaptchaReady || phoneLogin.length !== 10}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] hover:shadow-[4px_4px_0px_0px_rgba(4,120,87,1)] transition-all cursor-pointer disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2.5"
-                  >
-                    {submitting ? (
-                      <><Loader2 className="w-5 h-5 animate-spin" /> {t.sending}</>
-                    ) : (
-                      <><Smartphone className="w-5 h-5" /> {t.get_otp}</>
-                    )}
-                  </button>
-                </form>
-              )}
-
-              {/* ── Phone login (step 2: OTP input) ── */}
-              {loginMethod === "phone" && otpSent && (
-                <form onSubmit={(e) => { e.preventDefault(); handleOtpConfirm(); }} className="space-y-5">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">2</span>
-                      <label className="text-xs font-bold text-stone-600">{t.otp_step2}</label>
-                    </div>
-                    <p className="text-sm text-stone-500 mt-2">
-                      {t.otp_sent_to} <strong className="text-stone-900">{otpPhone}</strong>
-                    </p>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      placeholder={t.otp_placeholder}
-                      className="w-full py-3.5 px-4 text-xl tracking-[0.5em] text-center bg-white border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-bold transition mt-2"
-                      required
-                      maxLength={6}
-                      autoFocus
-                    />
-                    <p className="mt-1.5 text-xs text-stone-400 flex items-center gap-1">
-                      <MessageSquare className="w-3 h-3" />
-                      {t.otp_hint}
-                    </p>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={submitting || otpCode.length !== 6}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] hover:shadow-[4px_4px_0px_0px_rgba(4,120,87,1)] transition-all cursor-pointer disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2.5"
-                  >
-                    {submitting ? (
-                      <><Loader2 className="w-5 h-5 animate-spin" /> {t.verifying}</>
-                    ) : (
-                      <><CheckCircle className="w-5 h-5" /> {t.verify_otp}</>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setOtpSent(false); setConfirmationResult(null); setOtpCode(""); }}
-                    className="w-full text-xs font-semibold text-stone-400 hover:text-stone-700 transition cursor-pointer underline underline-offset-2"
-                  >
-                    {t.change_phone}
-                  </button>
-                </form>
-              )}
-
-              {/* ── Email login ── */}
-              {loginMethod === "email" && (
-                <form onSubmit={handleEmailLogin} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1.5">{t.email_label}</label>
-                    <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
-                      <Mail className="w-5 h-5 text-stone-400 shrink-0" />
-                      <input
-                        type="email"
-                        value={emailLogin}
-                        onChange={(e) => setEmailLogin(e.target.value)}
-                        placeholder={t.email_placeholder}
-                        className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1.5">{t.password_label}</label>
-                    <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
-                      <Lock className="w-5 h-5 text-stone-400 shrink-0" />
-                      <input
-                        type="password"
-                        value={passwordLogin}
-                        onChange={(e) => setPasswordLogin(e.target.value)}
-                        placeholder={t.password_placeholder}
-                        className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] transition-all cursor-pointer disabled:shadow-none disabled:cursor-not-allowed"
-                  >
-                    {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t.sign_in_btn}
-                  </button>
-                  <p className="text-[10px] text-stone-400 text-center font-mono">{t.rsk_note}</p>
-                </form>
-              )}
-            </>
-          )}
-
-          {/* ── REGISTER ────────────────────────────────────────── */}
-          {mode === "register" && (
-            <form onSubmit={handleRegister} className="space-y-3.5">
               {/* Name */}
               <div>
                 <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_name}</label>
@@ -769,37 +670,34 @@ export default function LoginPage() {
                 <p className="mt-0.5 text-[11px] text-stone-400">{t.reg_name_hint}</p>
               </div>
 
-              {/* Phone + Email */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_phone}</label>
-                  <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
-                    <Phone className="w-5 h-5 text-stone-400 shrink-0" />
-                    <input
-                      type="tel"
-                      value={regPhone}
-                      onChange={(e) => setRegPhone(e.target.value)}
-                      placeholder="+91"
-                      className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
-                      required
-                    />
-                  </div>
+              {/* Phone (read-only, verified) */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_phone}</label>
+                <div className="flex items-center gap-2.5 bg-stone-100 border-2 border-stone-200 rounded-2xl px-4">
+                  <Phone className="w-5 h-5 text-stone-400 shrink-0" />
+                  <input
+                    type="tel"
+                    value={regPhone}
+                    readOnly
+                    className="w-full py-3 text-sm bg-transparent font-semibold text-stone-500 cursor-not-allowed"
+                  />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_email}</label>
-                  <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
-                    <Mail className="w-5 h-5 text-stone-400 shrink-0" />
-                    <input
-                      type="email"
-                      value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
-                      placeholder={t.email_placeholder}
-                      className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
-                      required
-                    />
-                  </div>
-                  <p className="mt-0.5 text-[11px] text-stone-400">{t.reg_email_hint}</p>
+              </div>
+
+              {/* Email (optional) */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_email}</label>
+                <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
+                  <Mail className="w-5 h-5 text-stone-400 shrink-0" />
+                  <input
+                    type="email"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder={t.email_placeholder}
+                    className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
+                  />
                 </div>
+                <p className="mt-0.5 text-[11px] text-stone-400">{t.reg_email_hint}</p>
               </div>
 
               {/* Language */}
@@ -817,39 +715,6 @@ export default function LoginPage() {
                     <option value="bn">বাংলা</option>
                     <option value="te">తెలుగు</option>
                   </select>
-                </div>
-              </div>
-
-              {/* Password + Confirm */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_password}</label>
-                  <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
-                    <Lock className="w-5 h-5 text-stone-400 shrink-0" />
-                    <input
-                      type="password"
-                      value={regPassword}
-                      onChange={(e) => setRegPassword(e.target.value)}
-                      placeholder="••••••"
-                      className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
-                      required
-                    />
-                  </div>
-                  <p className="mt-0.5 text-[11px] text-stone-400">{t.reg_password_hint}</p>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_confirm}</label>
-                  <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
-                    <Lock className="w-5 h-5 text-stone-400 shrink-0" />
-                    <input
-                      type="password"
-                      value={regConfirm}
-                      onChange={(e) => setRegConfirm(e.target.value)}
-                      placeholder="••••••"
-                      className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
-                      required
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -924,11 +789,170 @@ export default function LoginPage() {
 
               <p className="text-xs text-stone-500 text-center mt-2 font-medium">
                 {t.have_account}{" "}
-                <button type="button" onClick={() => setMode("login")} className="text-emerald-700 font-bold hover:underline cursor-pointer">
+                <button type="button" onClick={() => switchMode("login")} className="text-emerald-700 font-bold hover:underline cursor-pointer">
                   {t.sign_in_link}
                 </button>
               </p>
             </form>
+          ) : (
+            <>
+              {/* ── LOGIN (email) ─────────────────────────────────── */}
+              {!isRegister && loginMethod === "email" && (
+                <form onSubmit={handleEmailLogin} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1.5">{t.email_label}</label>
+                    <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
+                      <Mail className="w-5 h-5 text-stone-400 shrink-0" />
+                      <input
+                        type="email"
+                        value={emailLogin}
+                        onChange={(e) => setEmailLogin(e.target.value)}
+                        placeholder={t.email_placeholder}
+                        className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1.5">{t.password_label}</label>
+                    <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
+                      <Lock className="w-5 h-5 text-stone-400 shrink-0" />
+                      <input
+                        type="password"
+                        value={passwordLogin}
+                        onChange={(e) => setPasswordLogin(e.target.value)}
+                        placeholder={t.password_placeholder}
+                        className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] transition-all cursor-pointer disabled:shadow-none disabled:cursor-not-allowed"
+                  >
+                    {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t.sign_in_btn}
+                  </button>
+                  <p className="text-[10px] text-stone-400 text-center font-mono">{t.rsk_note}</p>
+                </form>
+              )}
+
+              {/* ── PHONE FLOW (login + register) ─────────────────── */}
+              {((!isRegister && loginMethod === "phone") || isRegister) && (
+                <>
+                  {/* Method toggle (login only) */}
+                  {!isRegister && (
+                    <div className="flex gap-2 mb-6">
+                      {(["phone", "email"] as const).map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => { setLoginMethod(m); setError(""); resetPhoneFlow(); }}
+                          className={`flex-1 py-3 text-xs font-bold rounded-2xl border-2 flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                            loginMethod === m
+                              ? "bg-emerald-50 border-emerald-600 text-emerald-800 shadow-[2px_2px_0px_0px_rgba(5,150,105,1)]"
+                              : "bg-white border-stone-200 text-stone-500 hover:border-stone-400"
+                          }`}
+                        >
+                          {m === "phone" ? <Smartphone className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
+                          {m === "phone" ? t.login_phone : t.login_email}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Step 1: phone input */}
+                  {phoneStep === "input" && (
+                    <form onSubmit={(e) => { e.preventDefault(); handleSendOtp(); }} className="space-y-5">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">1</span>
+                          <label className="text-xs font-bold text-stone-600">{t.otp_step1}</label>
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <div className="bg-stone-100 border-2 border-stone-300 rounded-2xl px-4 flex items-center text-sm font-bold text-stone-500 shrink-0">
+                            +91
+                          </div>
+                          <input
+                            type="tel"
+                            inputMode="numeric"
+                            value={phoneLogin}
+                            onChange={(e) => setPhoneLogin(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                            placeholder={t.mobile_placeholder}
+                            className="w-full py-3 px-4 text-base bg-white border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-bold transition"
+                            required
+                            autoFocus
+                          />
+                        </div>
+                        <p className="mt-1.5 text-xs text-stone-400 flex items-center gap-1">
+                          <MessageSquare className="w-3 h-3" />
+                          {t.mobile_hint}
+                        </p>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={submitting || phoneLogin.replace(/\D/g, "").length !== 10}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] hover:shadow-[4px_4px_0px_0px_rgba(4,120,87,1)] transition-all cursor-pointer disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2.5"
+                      >
+                        {submitting ? (
+                          <><Loader2 className="w-5 h-5 animate-spin" /> {t.sending}</>
+                        ) : (
+                          <><Smartphone className="w-5 h-5" /> {t.get_otp}</>
+                        )}
+                      </button>
+                    </form>
+                  )}
+
+                  {/* Step 2: OTP input */}
+                  {phoneStep === "otp" && (
+                    <form onSubmit={(e) => { e.preventDefault(); handleVerifyOtp(); }} className="space-y-5">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">2</span>
+                          <label className="text-xs font-bold text-stone-600">{t.otp_step2}</label>
+                        </div>
+                        <p className="text-sm text-stone-500 mt-2">
+                          {t.otp_sent_to} <strong className="text-stone-900">{otpPhone}</strong>
+                        </p>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          placeholder={t.otp_placeholder}
+                          className="w-full py-3.5 px-4 text-xl tracking-[0.5em] text-center bg-white border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-bold transition mt-2"
+                          required
+                          maxLength={6}
+                          autoFocus
+                        />
+                        <p className="mt-1.5 text-xs text-stone-400 flex items-center gap-1">
+                          <MessageSquare className="w-3 h-3" />
+                          {t.otp_hint}
+                        </p>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={submitting || otpCode.length !== 6}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] hover:shadow-[4px_4px_0px_0px_rgba(4,120,87,1)] transition-all cursor-pointer disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2.5"
+                      >
+                        {submitting ? (
+                          <><Loader2 className="w-5 h-5 animate-spin" /> {t.verifying}</>
+                        ) : (
+                          <><CheckCircle className="w-5 h-5" /> {t.verify_otp}</>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { resetPhoneFlow(); }}
+                        className="w-full text-xs font-semibold text-stone-400 hover:text-stone-700 transition cursor-pointer underline underline-offset-2"
+                      >
+                        {t.change_phone}
+                      </button>
+                    </form>
+                  )}
+                </>
+              )}
+            </>
           )}
 
           {/* ── Footer ──────────────────────────────────────────── */}
@@ -948,7 +972,7 @@ export default function LoginPage() {
       </div>
 
       {/* Recaptcha container (invisible) */}
-      <div id="recaptcha-container" ref={recaptchaRef} />
+      <div id="recaptcha-container" />
     </div>
   );
 }

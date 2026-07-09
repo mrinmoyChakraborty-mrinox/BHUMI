@@ -1,9 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Sprout, MessageSquare, Compass, ShieldAlert,
   Droplet, CloudSun, FileText, ArrowRight,
-  Languages, Leaf, Wheat, HeartHandshake,
+  Languages, Leaf, Wheat, HeartHandshake, Download,
 } from "lucide-react";
 import type { Language } from "../../types";
 import LOGO from "../../LOGO_BHUMI.png";
@@ -90,17 +90,52 @@ const FOOTER: Record<Language, string> = {
   te: "భూమి — జాతీయ వ్యవసాయ సాంకేతిక కార్యక్రమం",
 };
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
 export default function LandingPage() {
   const [language, setLanguage] = useState<Language>("en");
   const navigate = useNavigate();
   const t = HERO_TEXT[language];
+
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    const onBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    const onAppInstalled = () => {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+    };
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    window.addEventListener("appinstalled", onAppInstalled);
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+    }
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      window.removeEventListener("appinstalled", onAppInstalled);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    await deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    setDeferredPrompt(null);
+  };
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 antialiased flex flex-col">
       {/* ── Top nav ─────────────────────────────────────────────── */}
       <header className="bg-white border-b-4 border-stone-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-3 no-underline">
             <img
               src={LOGO}
               alt="BHUMI"
@@ -114,7 +149,7 @@ export default function LandingPage() {
                 Krishi AI Portal
               </h1>
             </div>
-          </div>
+          </Link>
           <nav className="flex items-center gap-3">
             {/* Language switcher */}
             <div className="hidden sm:flex bg-white border-2 border-stone-900 p-0.5 rounded-xl shadow-[2px_2px_0px_0px_rgba(28,25,23,1)]">
@@ -133,6 +168,15 @@ export default function LandingPage() {
                 </button>
               ))}
             </div>
+            {deferredPrompt && !isInstalled && (
+              <button
+                onClick={handleInstall}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold font-mono bg-emerald-600 text-white border-2 border-stone-900 rounded-xl hover:bg-emerald-700 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                Install App
+              </button>
+            )}
             <Link
               to="/login"
               className="px-4 py-2 text-xs font-bold font-mono bg-white border-2 border-stone-900 rounded-xl hover:bg-stone-50 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)]"

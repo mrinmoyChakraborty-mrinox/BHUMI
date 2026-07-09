@@ -1,9 +1,11 @@
 import { Suspense, type ReactNode } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import ProtectedRoute from "./auth/ProtectedRoute";
+import FarmerRoute from "./auth/FarmerRoute";
 import PublicLayout from "./layouts/PublicLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
 import AdminLayout from "./layouts/AdminLayout";
+import FarmerLayout from "./layouts/FarmerLayout";
 
 import LandingPage from "./pages/public/LandingPage";
 import PublicHomePage from "./pages/public/PublicHomePage";
@@ -15,6 +17,12 @@ import DashboardHome from "./pages/dashboard/DashboardHome";
 import FarmersList from "./pages/dashboard/FarmersList";
 import AlertsList from "./pages/dashboard/AlertsList";
 import HealthLogsList from "./pages/dashboard/HealthLogsList";
+
+import FarmerHome from "./pages/farmer/FarmerHome";
+import FarmerPlots from "./pages/farmer/FarmerPlots";
+import FarmerAlerts from "./pages/farmer/FarmerAlerts";
+import FarmerHealthLogs from "./pages/farmer/FarmerHealthLogs";
+import FarmerProfile from "./pages/farmer/FarmerProfile";
 
 import Districts from "./pages/admin/Districts";
 import Wards from "./pages/admin/Wards";
@@ -88,6 +96,21 @@ export const router = createBrowserRouter([
       { path: "wards", element: <SuspenseWrapper><Wards /></SuspenseWrapper> },
       { path: "officers", element: <SuspenseWrapper><Officers /></SuspenseWrapper> },
       { path: "alerts", element: <SuspenseWrapper><AlertsManage /></SuspenseWrapper> },
+    ],
+  },
+  {
+    path: "/farmer",
+    element: (
+      <FarmerRoute>
+        <SuspenseWrapper><FarmerLayout /></SuspenseWrapper>
+      </FarmerRoute>
+    ),
+    children: [
+      { index: true, element: <SuspenseWrapper><FarmerHome /></SuspenseWrapper> },
+      { path: "plots", element: <SuspenseWrapper><FarmerPlots /></SuspenseWrapper> },
+      { path: "alerts", element: <SuspenseWrapper><FarmerAlerts /></SuspenseWrapper> },
+      { path: "health-logs", element: <SuspenseWrapper><FarmerHealthLogs /></SuspenseWrapper> },
+      { path: "profile", element: <SuspenseWrapper><FarmerProfile /></SuspenseWrapper> },
     ],
   },
   {

@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 
 from app.firebase_client import db
 from app.firestore_utils import doc_to_dict, get_or_404, clean_update
 from app.schemas import FarmerCreate, FarmerUpdate, FarmerOut
-from app.auth import require_admin
+from app.auth import require_admin, get_current_user
 
 router = APIRouter(prefix="/farmers", tags=["Farmers"])
 COLLECTION = "farmers"
@@ -120,3 +120,44 @@ def update_farmer(farmer_id: str, payload: FarmerUpdate):
 def delete_farmer(farmer_id: str):
     get_or_404(db.collection(COLLECTION), farmer_id, "Farmer")
     db.collection(COLLECTION).document(farmer_id).delete()
+
+
+@router.patch("/{farmer_id}/self", response_model=FarmerOut)
+async def update_own_farmer(
+    farmer_id: str,
+    payload: FarmerUpdate,
+    authorization: str = Header(default=None),
+):
+    """Allow a farmer to update their own profile.
+
+    The caller must be the owner — verified by matching the Firebase token's
+    `phone_number` claim against the stored farmer phone.
+    """
+    decoded = await get_current_user(authorization=authorization)
+    doc_ref = db.collection(COLLECTION).document(farmer_id)
+    snap = doc_ref.get()
+    if not snap.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Farmer not found")
+
+    token_phone = decoded.get("phone_number")
+    if not token_phone or snap.to_dict().get("phone") != token_phone:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only update your own profile",
+        )
+
+    allowed: dict = {}
+    if payload.name is not None:
+        allowed["name"] = payload.name
+    if payload.preferred_language is not None:
+        allowed["preferred_language"] = payload.preferred_language
+    if payload.state is not None:
+        allowed["state"] = payload.state
+    if payload.district is not None:
+        allowed["district"] = payload.district
+    if payload.email is not None:
+        allowed["email"] = payload.email
+
+    if allowed:
+        doc_ref.update(allowed)
+    return doc_to_dict(doc_ref.get())

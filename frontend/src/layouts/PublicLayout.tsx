@@ -6,7 +6,7 @@ export default function PublicLayout() {
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans antialiased">
       <header className="bg-white border-b-4 border-stone-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <Link to="/app" className="flex items-center gap-3 no-underline">
+          <Link to="/" className="flex items-center gap-3 no-underline">
             <img
               src={LOGO}
               alt="BHUMI"

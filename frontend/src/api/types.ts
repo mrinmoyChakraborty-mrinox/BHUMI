@@ -60,9 +60,10 @@ export interface FarmerCreate {
   name: string;
   phone: string;
   preferred_language?: Language;
-  ward_id: string;
+  ward_id?: string;
   state?: string;
   district?: string;
+  email?: string;
 }
 
 export type Language = "en" | "hi" | "bn" | "te";
@@ -74,6 +75,7 @@ export interface FarmerUpdate {
   ward_id?: string;
   state?: string;
   district?: string;
+  email?: string;
 }
 
 export interface FarmerOut {
@@ -84,17 +86,22 @@ export interface FarmerOut {
   ward_id: string;
   state?: string | null;
   district?: string | null;
+  email?: string | null;
   created_at?: string | null;
 }
 
 export interface PlotCreate {
   farmer_id: string;
-  ward_id: string;
+  ward_id?: string;
   soil_type?: string | null;
   groundwater_depth_m?: number | null;
   avg_rainfall_mm?: number | null;
   current_crop?: string | null;
   crop_stage?: string | null;
+  address?: string | null;
+  district?: string | null;
+  state?: string | null;
+  area_acre?: number | null;
 }
 
 export interface PlotUpdate {
@@ -115,6 +122,10 @@ export interface PlotOut {
   avg_rainfall_mm?: number | null;
   current_crop?: string | null;
   crop_stage?: string | null;
+  address?: string | null;
+  district?: string | null;
+  state?: string | null;
+  area_acre?: number | null;
   last_updated?: string | null;
 }
 

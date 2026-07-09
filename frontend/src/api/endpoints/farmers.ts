@@ -39,6 +39,13 @@ export function updateFarmer(id: string, data: FarmerUpdate) {
   });
 }
 
+export function updateOwnFarmer(id: string, data: FarmerUpdate) {
+  return apiRequest<FarmerOut>(`/farmers/${id}/self`, {
+    method: "PATCH",
+    body: data,
+  });
+}
+
 export function deleteFarmer(id: string) {
   return apiRequest<void>(`/farmers/${id}`, { method: "DELETE" });
 }
