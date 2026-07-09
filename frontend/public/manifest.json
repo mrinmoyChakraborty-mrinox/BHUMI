@@ -1,0 +1,31 @@
+{
+  "name": "BHUMI — Smart Farming Platform",
+  "short_name": "BHUMI",
+  "description": "Free AI-powered agricultural tools for Indian farmers — crop advice, disease detection, weather alerts & government schemes.",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#fafaf9",
+  "theme_color": "#059669",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["agriculture", "education", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "edge_side_panel": {}
+}

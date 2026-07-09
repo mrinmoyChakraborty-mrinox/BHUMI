@@ -769,7 +769,7 @@ export default function LoginPage() {
               </div>
 
               {/* Phone + Email */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_phone}</label>
                   <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
@@ -820,7 +820,7 @@ export default function LoginPage() {
               </div>
 
               {/* Password + Confirm */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_password}</label>
                   <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
@@ -853,7 +853,7 @@ export default function LoginPage() {
               </div>
 
               {/* State + District */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_state}</label>
                   <select
@@ -880,7 +880,7 @@ export default function LoginPage() {
               </div>
 
               {/* Crop + Soil */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_crop}</label>
                   <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">

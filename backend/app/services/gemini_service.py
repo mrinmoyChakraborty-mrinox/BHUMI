@@ -13,6 +13,7 @@ import base64
 import json
 import logging
 import re
+import textwrap
 from typing import Optional
 
 import requests
@@ -54,6 +55,51 @@ def _extract_text(response_json: dict) -> str:
         return "".join(p.get("text", "") for p in parts)
     except (KeyError, IndexError) as e:
         raise GeminiError(f"Unexpected Gemini response shape: {response_json}") from e
+
+
+# Reasoning indicator patterns — lines matching these are stripped from the response
+_REASONING_PATTERNS = re.compile(
+    r"^(?:\s*[\*\-]\s+)?"
+    r"(?:"
+    r"user says|my role:|assistant identity|target audience"
+    r"|context:|constraints:|greeting:|response format"
+    r"|output format|instructions:|task:|format:"
+    r"|i should|i will|i need to|let me"
+    r"|here is my|here's my|my response"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _strip_reasoning(text: str) -> str:
+    """Strip chain-of-thought / reasoning prefix that Gemini sometimes emits."""
+    if not text:
+        return text
+
+    lines = text.split("\n")
+    # Find the first line that does NOT look like reasoning
+    answer_start = 0
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        # Check if this line looks like the start of the actual answer
+        if not _REASONING_PATTERNS.search(stripped):
+            # Also skip isolated bullet/asterisk lines that aren't part of an answer
+            if stripped in ("*", "-") or re.match(r"^\s*[\*\-]\s*$", stripped):
+                continue
+            # Check if the line starts with a reasoning prefix
+            if stripped.startswith("*") or stripped.startswith("-"):
+                # Could still be reasoning — check next line
+                if i + 1 < len(lines):
+                    next_stripped = lines[i + 1].strip()
+                    if _REASONING_PATTERNS.search(next_stripped):
+                        continue
+            answer_start = i
+            break
+
+    result = "\n".join(lines[answer_start:]).strip()
+    return result if result else text
 
 
 def _parse_json_block(text: str) -> dict:
@@ -334,14 +380,23 @@ Relate advice to the local context (Location: {location}).
 IMPORTANT: Respond with plain text only, no markdown formatting, no JSON.
 CRITICAL: Output ONLY the final answer. Do NOT include any reasoning, planning, drafts, or thinking process in your response."""
 
+    # Prepend a strong directive to the user message to suppress reasoning
+    guarded_message = (
+        "IMPORTANT: You must respond with ONLY the final answer. "
+        "Do NOT include any reasoning, planning, bullet points, or thinking process. "
+        "Start your response directly with the greeting or answer. "
+        "Never describe what you are about to do.\n\n"
+        f"User message: {message}"
+    )
+
     formatted: list[dict] = []
     for msg in history:
         role = "user" if msg.get("role") == "user" else "model"
         formatted.append({"role": role, "parts": [{"text": msg.get("text", "")}]})
-    formatted.append({"role": "user", "parts": [{"text": message}]})
+    formatted.append({"role": "user", "parts": [{"text": guarded_message}]})
 
     response_json = _call_gemini(formatted, system_instruction=system)
-    return _extract_text(response_json).strip()
+    return _strip_reasoning(_extract_text(response_json)).strip()
 
 
 # ---------- 6. Weather Advisory Bulletin ----------
