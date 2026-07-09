@@ -3,11 +3,11 @@ import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthContext } from "../auth/AuthContext";
 import LOGO from "../LOGO_BHUMI.png";
 import {
-  Home, MapPin, Bell, Leaf, User, LogOut, Menu, X, Sparkles,
+  Home, MapPin, Bell, Leaf, User, LogOut, Menu, X, Sparkles, ExternalLink,
 } from "lucide-react";
 
 const navItems = [
-  { to: "/farmer", label: "Home", icon: Home },
+  { to: "/farmer", label: "Home", icon: Home, end: true },
   { to: "/farmer/plots", label: "My Plots", icon: MapPin },
   { to: "/farmer/alerts", label: "My Alerts", icon: Bell },
   { to: "/farmer/health-logs", label: "Health Logs", icon: Leaf },
@@ -27,22 +27,34 @@ export default function FarmerLayout() {
 
   const displayName = farmerProfile?.name || "Farmer";
 
+  const isActive = (to: string, end?: boolean) =>
+    end ? location.pathname === to : location.pathname.startsWith(to);
+
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans antialiased flex flex-col md:flex-row">
-      {/* Mobile header */}
-      <div className="md:hidden flex items-center justify-between bg-white border-b-4 border-stone-900 px-4 py-3 sticky top-0 z-50">
+      {/* Top bar (always visible) */}
+      <header className="md:hidden sticky top-0 z-50 bg-white border-b-4 border-stone-900 flex items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2 no-underline">
           <img src={LOGO} alt="BHUMI" className="w-8 h-8 rounded-lg border-2 border-stone-900 object-cover" />
-          <span className="font-black text-sm">BHUMI</span>
+          <span className="font-black text-sm">BHUMI Farmer</span>
         </Link>
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 border-2 border-stone-900 rounded-xl cursor-pointer"
-          aria-label="Toggle menu"
-        >
-          {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleLogout}
+            className="p-2 border-2 border-stone-200 rounded-xl hover:border-red-500 hover:text-red-600 cursor-pointer"
+            aria-label="Logout"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 border-2 border-stone-900 rounded-xl cursor-pointer"
+            aria-label="Toggle menu"
+          >
+            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+      </header>
 
       {/* Overlay */}
       {sidebarOpen && (
@@ -75,7 +87,7 @@ export default function FarmerLayout() {
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
-            const active = location.pathname === item.to;
+            const active = isActive(item.to, item.end);
             return (
               <Link
                 key={item.to}
@@ -93,6 +105,14 @@ export default function FarmerLayout() {
               </Link>
             );
           })}
+          <Link
+            to="/app"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold font-mono border-2 border-transparent text-stone-500 hover:border-stone-900 hover:shadow-[2px_2px_0px_0px_rgba(28,25,23,1)]"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Public Portal
+          </Link>
         </nav>
 
         <div className="p-3 border-t-4 border-stone-900">

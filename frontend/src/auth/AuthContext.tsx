@@ -26,6 +26,7 @@ interface AuthState {
   loginRedirect: string | null;
   setLoginRedirect: (path: string | null) => void;
   setFarmerProfile: (profile: FarmerOut | null) => void;
+  setRole: (role: UserRole) => void;
   logout: () => Promise<void>;
 }
 
@@ -110,6 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     if (auth) await signOut(auth);
+    setRole(null);
+    setOfficerName(null);
     setFarmerId(null);
     setFarmerProfile(null);
   }, []);
@@ -127,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginRedirect,
         setLoginRedirect,
         setFarmerProfile,
+        setRole,
         logout,
       }}
     >
