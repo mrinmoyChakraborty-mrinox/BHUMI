@@ -13,11 +13,12 @@ import { apiRequest } from "../../api/client";
 import type { FarmerOut, PlotCreate, PlotOut } from "../../api/types";
 import { API_BASE_URL } from "../../config/env";
 import {
-  Sprout, Loader2, Mail, Lock, Phone, Smartphone,
+  Loader2, Mail, Lock, Phone, Smartphone, Sprout,
   User, Globe, AlertCircle, CheckCircle,
   MessageSquare,
 } from "lucide-react";
 import type { Language } from "../../types";
+import LOGO from "../../LOGO_BHUMI.png";
 
 // ── Localised text for all 4 languages ─────────────────────────
 const T = {
@@ -537,7 +538,7 @@ export default function LoginPage() {
           {/* Content */}
           <div className="relative z-10 flex-1 flex flex-col justify-center">
             <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur px-3 py-1.5 rounded-full text-[10px] font-bold tracking-widest border border-white/20 self-start mb-4">
-              <Sprout className="w-3 h-3" />
+              <img src={LOGO} alt="BHUMI" className="w-5 h-5 rounded-md border border-white/40 object-cover" />
               {t.brand}
             </div>
             <h2 className="text-3xl md:text-4xl font-display font-black leading-tight">

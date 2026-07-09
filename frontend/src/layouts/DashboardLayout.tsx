@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import LOGO from "../LOGO_BHUMI.png";
 import {
-  Sprout, LayoutDashboard, Users, Bell, Activity, LogOut, Menu, X,
+  LayoutDashboard, Users, Bell, Activity, LogOut, Menu, X,
 } from "lucide-react";
 
 const navItems = [
@@ -28,7 +29,7 @@ export default function DashboardLayout() {
       {/* Mobile header */}
       <div className="md:hidden flex items-center justify-between bg-white border-b-4 border-stone-900 px-4 py-3 sticky top-0 z-50">
         <Link to="/dashboard" className="flex items-center gap-2 no-underline">
-          <Sprout className="w-6 h-6 text-emerald-600" />
+          <img src={LOGO} alt="BHUMI" className="w-8 h-8 rounded-lg border-2 border-stone-900 object-cover" />
           <span className="font-black text-sm">BHUMI RSK</span>
         </Link>
         <button
@@ -60,7 +61,7 @@ export default function DashboardLayout() {
       >
         <div className="p-4 border-b-4 border-stone-900 hidden md:block">
           <Link to="/dashboard" className="flex items-center gap-2 no-underline">
-            <Sprout className="w-6 h-6 text-emerald-600" />
+            <img src={LOGO} alt="BHUMI" className="w-8 h-8 rounded-lg border-2 border-stone-900 object-cover" />
             <span className="font-black text-sm">BHUMI RSK</span>
           </Link>
           <div className="mt-2 text-[10px] font-mono text-stone-500">

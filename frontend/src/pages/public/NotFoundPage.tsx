@@ -1,12 +1,13 @@
 import { Link } from "react-router-dom";
-import { Sprout, Home } from "lucide-react";
+import { Home } from "lucide-react";
+import LOGO from "../../LOGO_BHUMI.png";
 
 export default function NotFoundPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-stone-50 p-6">
       <div className="max-w-md w-full bg-white border-2 border-stone-900 rounded-3xl p-8 shadow-[6px_6px_0px_0px_rgba(28,25,23,1)] text-center">
-        <div className="w-14 h-14 bg-amber-100 border-2 border-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <Sprout className="w-7 h-7 text-amber-600" />
+        <div className="w-16 h-16 bg-amber-100 border-2 border-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-4 overflow-hidden">
+          <img src={LOGO} alt="BHUMI" className="w-full h-full object-cover" />
         </div>
         <h1 className="text-6xl font-black text-stone-900 mb-2">404</h1>
         <p className="text-stone-500 text-sm font-mono mb-6">
