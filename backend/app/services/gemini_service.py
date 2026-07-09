@@ -56,32 +56,43 @@ def _extract_text(response_json: dict) -> str:
         raise GeminiError(f"Unexpected Gemini response shape: {response_json}") from e
 
 
+_ANSWER_HEAD = re.compile(
+    r"(?:^|\.|\?)\s*("
+    r"Namaste[!,\s]|Hello[,!\s]|Hi\s|Greetings[!,\s]|"
+    r"नमस्ते[!,\s]|নমস্কার[!,\s]|నమస్కారం[!,\s]"
+    r")",
+    re.IGNORECASE,
+)
+
+
 def _strip_reasoning(text: str) -> str:
     """Strip chain-of-thought / reasoning prefix that Gemini sometimes emits.
 
-    Gemini 2.0 Flash emits a reasoning block as bullet points before the
-    actual answer. The reasoning always uses "*" or "-" prefixed lines and
-    may include a draft of the answer inside quotes. We take only the text
-    after the last bullet-point line.
+    Gemini 2.0 Flash emits a reasoning block (bullet points) before the
+    actual answer. The answer may be on its own line after the last bullet
+    OR concatenated to the last bullet line without a newline.  We find the
+    LAST occurrence of an answer-starting keyword anywhere in the text and
+    return everything from that point.
     """
     if not text:
         return text
 
-    lines = text.split("\n")
-    # Reasoning lines use * or - at the start. Continuation lines are indented.
-    # Find the last line that is definitely a bullet-point reasoning line.
-    last_bullet_idx = -1
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped.startswith("*") or stripped.startswith("-"):
-            last_bullet_idx = i
-
-    if last_bullet_idx < 0:
-        # No bullet-point reasoning found — return as-is
+    # Find all occurrences of answer-starting keywords
+    matches = list(_ANSWER_HEAD.finditer(text))
+    if not matches:
+        # Fallback: strip text before the last bullet-point line
+        lines = text.split("\n")
+        last_bullet = -1
+        for i, line in enumerate(lines):
+            if line.strip().startswith("*") or line.strip().startswith("-"):
+                last_bullet = i
+        if last_bullet >= 0:
+            after = "\n".join(lines[last_bullet + 1 :]).strip()
+            return after if after else text
         return text
 
-    answer = "\n".join(lines[last_bullet_idx + 1 :]).strip()
-    return answer if answer else text
+    # Return from the LAST greeting keyword (captured group, not prefix)
+    return text[matches[-1].start(1) :].strip()
 
 
 def _parse_json_block(text: str) -> dict:
