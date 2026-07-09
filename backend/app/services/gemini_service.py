@@ -13,7 +13,6 @@ import base64
 import json
 import logging
 import re
-import textwrap
 from typing import Optional
 
 import requests
@@ -57,49 +56,32 @@ def _extract_text(response_json: dict) -> str:
         raise GeminiError(f"Unexpected Gemini response shape: {response_json}") from e
 
 
-# Reasoning indicator patterns — lines matching these are stripped from the response
-_REASONING_PATTERNS = re.compile(
-    r"^(?:\s*[\*\-]\s+)?"
-    r"(?:"
-    r"user says|my role:|assistant identity|target audience"
-    r"|context:|constraints:|greeting:|response format"
-    r"|output format|instructions:|task:|format:"
-    r"|i should|i will|i need to|let me"
-    r"|here is my|here's my|my response"
-    r")",
-    re.IGNORECASE,
-)
-
-
 def _strip_reasoning(text: str) -> str:
-    """Strip chain-of-thought / reasoning prefix that Gemini sometimes emits."""
+    """Strip chain-of-thought / reasoning prefix that Gemini sometimes emits.
+
+    Gemini 2.0 Flash emits a reasoning block as bullet points before the
+    actual answer. The reasoning always uses "*" or "-" prefixed lines and
+    may include a draft of the answer inside quotes. We take only the text
+    after the last bullet-point line.
+    """
     if not text:
         return text
 
     lines = text.split("\n")
-    # Find the first line that does NOT look like reasoning
-    answer_start = 0
+    # Reasoning lines use * or - at the start. Continuation lines are indented.
+    # Find the last line that is definitely a bullet-point reasoning line.
+    last_bullet_idx = -1
     for i, line in enumerate(lines):
         stripped = line.strip()
-        if not stripped:
-            continue
-        # Check if this line looks like the start of the actual answer
-        if not _REASONING_PATTERNS.search(stripped):
-            # Also skip isolated bullet/asterisk lines that aren't part of an answer
-            if stripped in ("*", "-") or re.match(r"^\s*[\*\-]\s*$", stripped):
-                continue
-            # Check if the line starts with a reasoning prefix
-            if stripped.startswith("*") or stripped.startswith("-"):
-                # Could still be reasoning — check next line
-                if i + 1 < len(lines):
-                    next_stripped = lines[i + 1].strip()
-                    if _REASONING_PATTERNS.search(next_stripped):
-                        continue
-            answer_start = i
-            break
+        if stripped.startswith("*") or stripped.startswith("-"):
+            last_bullet_idx = i
 
-    result = "\n".join(lines[answer_start:]).strip()
-    return result if result else text
+    if last_bullet_idx < 0:
+        # No bullet-point reasoning found — return as-is
+        return text
+
+    answer = "\n".join(lines[last_bullet_idx + 1 :]).strip()
+    return answer if answer else text
 
 
 def _parse_json_block(text: str) -> dict:
