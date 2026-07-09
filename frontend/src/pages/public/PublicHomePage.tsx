@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
-  Sprout, MessageSquare, Compass, ShieldAlert,
-  Droplet, CloudSun, FileText, Award, HelpCircle
+  MessageSquare, Compass, ShieldAlert,
+  Droplet, CloudSun, FileText,
 } from "lucide-react";
 import type { Language } from "../../types";
 import Chatbot from "../../components/Chatbot";
@@ -10,9 +10,8 @@ import DiseaseDetection from "../../components/DiseaseDetection";
 import IrrigationAdvice from "../../components/IrrigationAdvice";
 import WeatherAdvisory from "../../components/WeatherAdvisory";
 import SchemesDirectory from "../../components/SchemesDirectory";
-import HackathonGuide from "../../components/HackathonGuide";
 
-type Tab = "chat" | "recommendation" | "disease" | "irrigation" | "weather" | "schemes" | "guide";
+type Tab = "chat" | "recommendation" | "disease" | "irrigation" | "weather" | "schemes";
 
 export default function PublicHomePage() {
   const [language, setLanguage] = useState<Language>("en");
@@ -23,25 +22,21 @@ export default function PublicHomePage() {
       chat: "AI Chat & Voice", recommendation: "Soil & Crop Suggest",
       disease: "Leaf Disease Diagnosis", irrigation: "Water Schedule",
       weather: "Weather Alerts", schemes: "Govt Schemes",
-      guide: "Mentor's Guide & Reviews"
     },
     hi: {
       chat: "एआई चैट और आवाज", recommendation: "मिट्टी और फसल",
       disease: "पत्ती रोग निदान", irrigation: "सिंचाई कार्यक्रम",
       weather: "मौसम अलर्ट", schemes: "सरकारी योजनाएं",
-      guide: "मेंटर गाइड और समीक्षा"
     },
     bn: {
       chat: "এআই চ্যাট এবং ভয়েস", recommendation: "মাটি ও ফসল পরামর্শ",
       disease: "পাতার রোগ নির্ণয়", irrigation: "সেচের সময়সূচী",
       weather: "আবহাওয়া সতর্কতা", schemes: "সরকারী প্রকল্প",
-      guide: "মেন্টর গাইড এবং পর্যালোচনা"
     },
     te: {
       chat: "AI చాట్ & వాయిస్", recommendation: "నేల & పంట సూచన",
       disease: "ఆకు వ్యాధి నిర్ధారణ", irrigation: "నీటి షెడ్యూల్",
       weather: "వాతావరణ హెచ్చరికలు", schemes: "ప్రభుత్వ పథకాలు",
-      guide: "మెంటర్ గైడ్ & సమీక్షలు"
     }
   }[language];
 
@@ -70,9 +65,7 @@ export default function PublicHomePage() {
             onClick={() => setActiveTab(key)}
             className={`px-5 py-3 text-xs font-display font-black rounded-2xl border-2 border-stone-900 flex items-center gap-2 shrink-0 transition-all cursor-pointer ${
               activeTab === key
-                ? key === "guide"
-                  ? "bg-amber-400 text-stone-900 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] transform -translate-y-0.5"
-                  : "bg-emerald-600 text-white shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] transform -translate-y-0.5"
+                ? "bg-emerald-600 text-white shadow-[2px_2px_0px_0px_rgba(28,25,23,1)] transform -translate-y-0.5"
                 : "bg-white text-stone-800 hover:bg-stone-50 shadow-[2px_2px_0px_0px_rgba(28,25,23,1)]"
             }`}
           >
@@ -82,7 +75,6 @@ export default function PublicHomePage() {
             {key === "irrigation" && <Droplet className="w-4 h-4" />}
             {key === "weather" && <CloudSun className="w-4 h-4" />}
             {key === "schemes" && <FileText className="w-4 h-4" />}
-            {key === "guide" && <Award className="w-4 h-4" />}
             <span>{label}</span>
           </button>
         ))}
@@ -95,7 +87,6 @@ export default function PublicHomePage() {
         {activeTab === "irrigation" && <IrrigationAdvice language={language} />}
         {activeTab === "weather" && <WeatherAdvisory language={language} />}
         {activeTab === "schemes" && <SchemesDirectory language={language} />}
-        {activeTab === "guide" && <HackathonGuide />}
       </div>
     </div>
   );
