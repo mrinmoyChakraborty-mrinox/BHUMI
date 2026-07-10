@@ -348,6 +348,16 @@ export default function LoginPage() {
     navigate(dest, { replace: true });
   }, [user, role, authLoading, loginRedirect, navigate, setLoginRedirect]);
 
+  // Must be before early return to keep hook count consistent
+  useEffect(() => {
+    return () => {
+      if (recaptchaVerifierRef.current) {
+        try { recaptchaVerifierRef.current.clear(); } catch {}
+        recaptchaVerifierRef.current = null;
+      }
+    };
+  }, []);
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-stone-50 to-emerald-50">
@@ -368,15 +378,6 @@ export default function LoginPage() {
     recaptchaVerifierRef.current = verifier;
     return verifier;
   }
-
-  useEffect(() => {
-    return () => {
-      if (recaptchaVerifierRef.current) {
-        try { recaptchaVerifierRef.current.clear(); } catch {}
-        recaptchaVerifierRef.current = null;
-      }
-    };
-  }, []);
 
   const resetFlow = () => {
     setFlowStep("idle");
