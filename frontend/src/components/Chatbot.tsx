@@ -5,6 +5,8 @@ import { Message, Language } from "../types";
 
 interface ChatbotProps {
   language: Language;
+  district?: string;
+  state?: string;
 }
 
 function TypingDots() {
@@ -17,7 +19,7 @@ function TypingDots() {
   );
 }
 
-export default function Chatbot({ language }: ChatbotProps) {
+export default function Chatbot({ language, district, state }: ChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -130,14 +132,16 @@ export default function Chatbot({ language }: ChatbotProps) {
       text: msg.text,
     }));
 
+    const location = district ? `${district}${state ? `, ${state}` : ""}` : undefined;
+
     wsRef.current.send(JSON.stringify({
       type: "message",
       message: text,
       history: historyPayload,
       language,
-      location: "Guntur, Andhra Pradesh",
+      ...(location ? { location } : {}),
     }));
-  }, [input, messages, language]);
+  }, [input, messages, language, district, state]);
 
   const toggleListen = () => {
     if (!recognition) {

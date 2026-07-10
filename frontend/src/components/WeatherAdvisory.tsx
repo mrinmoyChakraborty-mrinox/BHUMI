@@ -6,11 +6,13 @@ import { Language } from "../types";
 
 interface WeatherAdvisoryProps {
   language: Language;
+  defaultState?: string;
+  defaultDistrict?: string;
 }
 
-export default function WeatherAdvisory({ language }: WeatherAdvisoryProps) {
-  const [state, setState] = useState("Andhra Pradesh");
-  const [district, setDistrict] = useState("Guntur");
+export default function WeatherAdvisory({ language, defaultState, defaultDistrict }: WeatherAdvisoryProps) {
+  const [state, setState] = useState(defaultState || "");
+  const [district, setDistrict] = useState(defaultDistrict || "");
   const [loading, setLoading] = useState(false);
   const [advisory, setAdvisory] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<PublicWeatherAdvisoryResponse["metrics"] | null>(null);

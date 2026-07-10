@@ -18,6 +18,53 @@ import { listHealthLogs } from "../../api/endpoints/healthLogs";
 
 type Tab = "chat" | "recommendation" | "disease" | "irrigation" | "weather" | "schemes";
 
+const T = {
+  en: {
+    welcome: "Welcome",
+    subtitle: "Your AI farming tools and personal dashboard",
+    my_plots: "My Plots",
+    active_alerts: "Active Alerts",
+    health_cases: "Health Cases",
+    no_plots_title: "Add your first plot",
+    no_plots_desc: "Track crops, get alerts and personalised advice.",
+    get_started: "Get started",
+    loading: "Loading…",
+  },
+  hi: {
+    welcome: "स्वागत है",
+    subtitle: "आपके AI कृषि उपकरण और निजी डैशबोर्ड",
+    my_plots: "मेरे प्लॉट",
+    active_alerts: "सक्रिय अलर्ट",
+    health_cases: "स्वास्थ्य मामले",
+    no_plots_title: "अपना पहला प्लॉट जोड़ें",
+    no_plots_desc: "फसलों को ट्रैक करें, अलर्ट और व्यक्तिगत सलाह प्राप्त करें।",
+    get_started: "शुरू करें",
+    loading: "लोड हो रहा है…",
+  },
+  bn: {
+    welcome: "স্বাগতম",
+    subtitle: "আপনার AI কৃষি সরঞ্জাম এবং ব্যক্তিগত ড্যাশবোর্ড",
+    my_plots: "আমার প্লট",
+    active_alerts: "সক্রিয় সতর্কতা",
+    health_cases: "স্বাস্থ্য ঘটনা",
+    no_plots_title: "আপনার প্রথম প্লট যোগ করুন",
+    no_plots_desc: "ফসল ট্র্যাক করুন, সতর্কতা এবং ব্যক্তিগত পরামর্শ পান।",
+    get_started: "শুরু করুন",
+    loading: "লোড হচ্ছে…",
+  },
+  te: {
+    welcome: "స్వాగతం",
+    subtitle: "మీ AI వ్యవసాయ సాధనాలు మరియు వ్యక్తిగత డ్యాష్‌బోర్డ్",
+    my_plots: "నా ప్లాట్లు",
+    active_alerts: "క్రియాశీల హెచ్చరికలు",
+    health_cases: "ఆరోగ్య కేసులు",
+    no_plots_title: "మీ మొదటి ప్లాట్‌ను జోడించండి",
+    no_plots_desc: "పంటలను ట్రాక్ చేయండి, హెచ్చరికలు మరియు వ్యక్తిగత సలహా పొందండి.",
+    get_started: "ప్రారంభించండి",
+    loading: "లోడ్ అవుతోంది…",
+  },
+};
+
 const tabMeta: { key: Tab; label: Record<Language, string>; icon: typeof MessageSquare }[] = [
   { key: "chat", label: { en: "AI Chat & Voice", hi: "एआई चैट और आवाज", bn: "এআই চ্যাট এবং ভয়েস", te: "AI చాట్ & వాయిస్" }, icon: MessageSquare },
   { key: "recommendation", label: { en: "Soil & Crop Suggest", hi: "मिट्टी और फसल", bn: "মাটি ও ফসল পরামর্শ", te: "నేల & పంట సూచన" }, icon: Compass },
@@ -31,6 +78,7 @@ export default function FarmerHome() {
   const { farmerProfile } = useAuthContext();
   const [language, setLanguage] = useState<Language>("en");
   const [activeTab, setActiveTab] = useState<Tab>("chat");
+  const t = T[language];
 
   const [stats, setStats] = useState<{ plots: number; alerts: number; health: number } | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
@@ -64,9 +112,9 @@ export default function FarmerHome() {
 
   const overview = stats
     ? [
-        { label: "My Plots", value: stats.plots, icon: MapPin, to: "/farmer/plots", color: "bg-emerald-100 text-emerald-800" },
-        { label: "Active Alerts", value: stats.alerts, icon: Bell, to: "/farmer/alerts", color: "bg-amber-100 text-amber-800" },
-        { label: "Health Cases", value: stats.health, icon: Leaf, to: "/farmer/health-logs", color: "bg-red-100 text-red-800" },
+        { label: t.my_plots, value: stats.plots, icon: MapPin, to: "/farmer/plots", color: "bg-emerald-100 text-emerald-800" },
+        { label: t.active_alerts, value: stats.alerts, icon: Bell, to: "/farmer/alerts", color: "bg-amber-100 text-amber-800" },
+        { label: t.health_cases, value: stats.health, icon: Leaf, to: "/farmer/health-logs", color: "bg-red-100 text-red-800" },
       ]
     : [];
 
@@ -76,10 +124,10 @@ export default function FarmerHome() {
         <div>
           <h2 className="text-2xl font-display font-black text-stone-900 flex items-center gap-2">
             <Sprout className="w-7 h-7 text-emerald-600" />
-            <span>Welcome, {farmerProfile?.name || "Farmer"}</span>
+            <span>{t.welcome}, {farmerProfile?.name || "Farmer"}</span>
           </h2>
           <p className="text-stone-500 font-medium text-xs mt-1">
-            Your AI farming tools and personal dashboard
+            {t.subtitle}
           </p>
         </div>
         <div className="flex bg-white border-2 border-stone-900 p-1 rounded-xl shadow-[2px_2px_0px_0px_rgba(28,25,23,1)]">
@@ -138,11 +186,11 @@ export default function FarmerHome() {
               <Plus className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-display font-black text-emerald-900">Add your first plot</p>
-              <p className="text-xs font-medium text-emerald-800">Track crops, get alerts and personalised advice.</p>
+              <p className="font-display font-black text-emerald-900">{t.no_plots_title}</p>
+              <p className="text-xs font-medium text-emerald-800">{t.no_plots_desc}</p>
             </div>
           </div>
-          <span className="text-emerald-700 font-bold text-sm">Get started →</span>
+          <span className="text-emerald-700 font-bold text-sm">{t.get_started} →</span>
         </Link>
       )}
 
@@ -165,11 +213,11 @@ export default function FarmerHome() {
       </div>
 
       <div className="bg-white rounded-3xl border-2 border-stone-900 p-6 sm:p-8 shadow-[6px_6px_0px_0px_rgba(28,25,23,1)]">
-        {activeTab === "chat" && <Chatbot language={language} />}
+        {activeTab === "chat" && <Chatbot language={language} district={farmerProfile?.district || undefined} state={farmerProfile?.state || undefined} />}
         {activeTab === "recommendation" && <CropRecommendation language={language} />}
         {activeTab === "disease" && <DiseaseDetection language={language} />}
         {activeTab === "irrigation" && <IrrigationAdvice language={language} />}
-        {activeTab === "weather" && <WeatherAdvisory language={language} />}
+        {activeTab === "weather" && <WeatherAdvisory language={language} defaultState={farmerProfile?.state || undefined} defaultDistrict={farmerProfile?.district || undefined} />}
         {activeTab === "schemes" && <SchemesDirectory language={language} />}
       </div>
     </div>
