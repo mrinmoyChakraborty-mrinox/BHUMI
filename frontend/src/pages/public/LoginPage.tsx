@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, type FormEvent } from "react";
-import { Navigate, Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   signInWithEmailAndPassword,
   signInWithPhoneNumber,
+  signInWithPopup,
+  GoogleAuthProvider,
   RecaptchaVerifier,
   type ConfirmationResult,
 } from "firebase/auth";
@@ -19,7 +21,7 @@ import {
 import type { Language } from "../../types";
 import LOGO from "../../LOGO_BHUMI.png";
 
-// ── Localised text for all 4 languages ─────────────────────────
+// ── Localised text ────────────────────────────────────────────
 const T = {
   en: {
     brand: "BHUMI Krishi AI",
@@ -28,10 +30,10 @@ const T = {
     hero_desc: "Free AI tools for Indian farmers — crop advice, disease detection, weather alerts & government schemes in your language.",
     benefits: ["Save your farming history", "Get personalised irrigation plans", "Real-time weather alerts for your area"],
     farmers_count: "48,500+ farmers trust us",
-    sign_in: "Sign In",
-    create_account: "Create Account",
-    login_phone: "Use Phone",
-    login_email: "Use Email",
+    farmer_tab: "Farmer",
+    rsk_tab: "RSK / Admin",
+    sign_in_google: "Sign in with Google",
+    or_continue: "or continue with phone",
     mobile_label: "Your Mobile Number",
     mobile_placeholder: "Enter 10-digit number",
     mobile_hint: "You will receive a 6-digit code via SMS",
@@ -47,13 +49,14 @@ const T = {
     password_label: "Password",
     password_placeholder: "Enter your password",
     sign_in_btn: "Sign In",
-    rsk_note: "RSK Officers & Admins — use Email login",
+    rsk_note: "RSK Officers & Admins — sign in with your registered email",
     reg_name: "Your Full Name",
     reg_name_hint: "As shown on your ID card",
-    reg_phone: "Mobile Number",
-    reg_phone_hint: "With country code, e.g. +91",
+    reg_phone_optional: "Phone Number (optional)",
+    reg_phone_hint: "For SMS alerts and account recovery",
+    reg_phone_verified: "Verified Phone",
     reg_email: "Email Address",
-    reg_email_hint: "Optional, for account recovery",
+    reg_email_hint: "For account recovery",
     reg_language: "Preferred Language",
     reg_state: "Your State",
     reg_state_placeholder: "Select your state",
@@ -63,24 +66,19 @@ const T = {
     reg_crop_placeholder: "e.g. Rice, Cotton, Wheat",
     reg_soil: "Soil Type (optional)",
     reg_soil_placeholder: "Select soil type",
-    register_btn: "Create My Account",
-    have_account: "Already registered?",
-    sign_in_link: "Sign in here",
-    guest: "Skip, continue as guest",
+    go_to_app: "Continue as Guest",
     back_home: "Back to home",
-    error_password_mismatch: "Passwords do not match — please type the same password twice",
-    error_password_short: "Password must be at least 6 characters",
-    error_otp_invalid: "That code is not correct. Please try again.",
     error_generic: "Something went wrong. Please try again.",
     error_network: "Could not connect. Check your internet and try again.",
     error_name_required: "Please enter your full name to continue.",
+    error_otp_invalid: "That code is not correct. Please try again.",
     sending: "Sending...",
     verifying: "Verifying...",
     creating: "Creating account...",
     step: "Step",
     of: "of",
-    welcome_back: "Welcome Back",
-    join_title: "Join as a Farmer",
+    welcome_farmer: "Welcome, Farmer",
+    join_title: "Create Farmer Account",
     otp_step1: "Enter your mobile number",
     otp_step2: "Enter the OTP sent to your phone",
     profile_title: "Complete Your Profile",
@@ -93,10 +91,10 @@ const T = {
     hero_desc: "भारतीय किसानों के लिए मुफ्त AI उपकरण — फसल सलाह, रोग पहचान, मौसम अलर्ट और सरकारी योजनाएं आपकी भाषा में।",
     benefits: ["अपना खेती इतिहास सुरक्षित रखें", "व्यक्तिगत सिंचाई योजना पाएं", "अपने क्षेत्र के मौसम अलर्ट"],
     farmers_count: "48,500+ किसान हम पर भरोसा करते हैं",
-    sign_in: "साइन इन",
-    create_account: "नया खाता बनाएं",
-    login_phone: "फ़ोन से",
-    login_email: "ईमेल से",
+    farmer_tab: "किसान",
+    rsk_tab: "RSK / प्रशासक",
+    sign_in_google: "Google से साइन इन करें",
+    or_continue: "या फ़ोन से जारी रखें",
     mobile_label: "आपका मोबाइल नंबर",
     mobile_placeholder: "10 अंकों का नंबर दर्ज करें",
     mobile_hint: "आपको SMS के ज़रिए 6 अंकों का कोड मिलेगा",
@@ -112,13 +110,14 @@ const T = {
     password_label: "पासवर्ड",
     password_placeholder: "अपना पासवर्ड दर्ज करें",
     sign_in_btn: "साइन इन",
-    rsk_note: "RSK अधिकारी और एडमिन — ईमेल से लॉगिन करें",
+    rsk_note: "RSK अधिकारी और एडमिन — पंजीकृत ईमेल से साइन इन करें",
     reg_name: "आपका पूरा नाम",
     reg_name_hint: "जैसा आपके ID कार्ड पर है",
-    reg_phone: "मोबाइल नंबर",
-    reg_phone_hint: "देश कोड के साथ, जैसे +91",
+    reg_phone_optional: "फ़ोन नंबर (वैकल्पिक)",
+    reg_phone_hint: "SMS अलर्ट और खाता रिकवरी के लिए",
+    reg_phone_verified: "सत्यापित फ़ोन",
     reg_email: "ईमेल पता",
-    reg_email_hint: "वैकल्पिक, खाता रिकवरी के लिए",
+    reg_email_hint: "खाता रिकवरी के लिए",
     reg_language: "पसंदीदा भाषा",
     reg_state: "आपका राज्य",
     reg_state_placeholder: "अपना राज्य चुनें",
@@ -128,24 +127,19 @@ const T = {
     reg_crop_placeholder: "जैसे धान, कपास, गेहूं",
     reg_soil: "मिट्टी का प्रकार (वैकल्पिक)",
     reg_soil_placeholder: "मिट्टी का प्रकार चुनें",
-    register_btn: "मेरा खाता बनाएं",
-    have_account: "पहले से खाता है?",
-    sign_in_link: "यहां साइन इन करें",
-    guest: "छोड़ें, बिना खाता जारी रखें",
+    go_to_app: "बिना खाता जारी रखें",
     back_home: "होम पेज पर जाएं",
-    error_password_mismatch: "पासवर्ड मेल नहीं खाते — कृपया दोबारा एक जैसा पासवर्ड लिखें",
-    error_password_short: "पासवर्ड कम से कम 6 अक्षर का होना चाहिए",
-    error_otp_invalid: "कोड सही नहीं है। कृपया फिर से प्रयास करें।",
     error_generic: "कुछ गलत हो गया। कृपया फिर से प्रयास करें।",
     error_network: "कनेक्शन नहीं हो पाया। अपना इंटरनेट जांचें।",
     error_name_required: "जारी रखने के लिए कृपया अपना पूरा नाम दर्ज करें।",
+    error_otp_invalid: "कोड सही नहीं है। कृपया फिर से प्रयास करें।",
     sending: "भेज रहे हैं...",
     verifying: "जांच रहे हैं...",
     creating: "खाता बना रहे हैं...",
     step: "चरण",
     of: "का",
-    welcome_back: "वापसी पर स्वागत है",
-    join_title: "किसान के रूप में जुड़ें",
+    welcome_farmer: "किसान, स्वागत है",
+    join_title: "किसान खाता बनाएं",
     otp_step1: "अपना मोबाइल नंबर दर्ज करें",
     otp_step2: "फ़ोन पर आया OTP कोड दर्ज करें",
     profile_title: "अपनी प्रोफाइल पूरी करें",
@@ -158,10 +152,10 @@ const T = {
     hero_desc: "ভারতীয় কৃষকদের জন্য বিনামূল্যে AI টুলস — ফসলের পরামর্শ, রোগ সনাক্তকরণ, আবহাওয়া সতর্কতা ও সরকারি প্রকল্প আপনার ভাষায়।",
     benefits: ["আপনার চাষের ইতিহাস সংরক্ষণ করুন", "ব্যক্তিগতকৃত সেচ পরিকল্পনা পান", "আপনার এলাকার আবহাওয়া সতর্কতা"],
     farmers_count: "৪৮,৫০০+ কৃষক আমাদের বিশ্বাস করেন",
-    sign_in: "সাইন ইন",
-    create_account: "নতুন অ্যাকাউন্ট",
-    login_phone: "ফোন দিয়ে",
-    login_email: "ইমেল দিয়ে",
+    farmer_tab: "কৃষক",
+    rsk_tab: "RSK / প্রশাসক",
+    sign_in_google: "Google দিয়ে সাইন ইন করুন",
+    or_continue: "অথবা ফোন দিয়ে চালিয়ে যান",
     mobile_label: "আপনার মোবাইল নম্বর",
     mobile_placeholder: "১০ ডিজিটের নম্বর দিন",
     mobile_hint: "আপনি SMS এর মাধ্যমে ৬ ডিজিটের কোড পাবেন",
@@ -177,13 +171,14 @@ const T = {
     password_label: "পাসওয়ার্ড",
     password_placeholder: "আপনার পাসওয়ার্ড দিন",
     sign_in_btn: "সাইন ইন",
-    rsk_note: "RSK অফিসার ও অ্যাডমিন — ইমেল দিয়ে লগইন করুন",
+    rsk_note: "RSK অফিসার ও অ্যাডমিন — নিবন্ধিত ইমেল দিয়ে সাইন ইন করুন",
     reg_name: "আপনার পুরো নাম",
     reg_name_hint: "যেমন আপনার ID কার্ডে আছে",
-    reg_phone: "মোবাইল নম্বর",
-    reg_phone_hint: "দেশ কোড সহ, যেমন +91",
+    reg_phone_optional: "ফোন নম্বর (ঐচ্ছিক)",
+    reg_phone_hint: "SMS সতর্কতা এবং অ্যাকাউন্ট পুনরুদ্ধারের জন্য",
+    reg_phone_verified: "যাচাইকৃত ফোন",
     reg_email: "ইমেল ঠিকানা",
-    reg_email_hint: "ঐচ্ছিক, অ্যাকাউন্ট পুনরুদ্ধারের জন্য",
+    reg_email_hint: "অ্যাকাউন্ট পুনরুদ্ধারের জন্য",
     reg_language: "পছন্দের ভাষা",
     reg_state: "আপনার রাজ্য",
     reg_state_placeholder: "আপনার রাজ্য নির্বাচন করুন",
@@ -193,24 +188,19 @@ const T = {
     reg_crop_placeholder: "যেমন ধান, তুলা, গম",
     reg_soil: "মাটির ধরন (ঐচ্ছিক)",
     reg_soil_placeholder: "মাটির ধরন নির্বাচন করুন",
-    register_btn: "আমার অ্যাকাউন্ট তৈরি করুন",
-    have_account: "ইতিমধ্যে নিবন্ধিত?",
-    sign_in_link: "এখানে সাইন ইন করুন",
-    guest: "এড়িয়ে যান, অতিথি হিসাবে চালিয়ে যান",
+    go_to_app: "অতিথি হিসাবে চালিয়ে যান",
     back_home: "হোম পেজে ফিরুন",
-    error_password_mismatch: "পাসওয়ার্ড মিলছে না — দয়া করে আবার একই পাসওয়ার্ড লিখুন",
-    error_password_short: "পাসওয়ার্ড কমপক্ষে ৬ অক্ষর হতে হবে",
-    error_otp_invalid: "কোডটি সঠিক নয়। আবার চেষ্টা করুন।",
     error_generic: "কিছু ভুল হয়েছে। আবার চেষ্টা করুন।",
     error_network: "সংযোগ হয়নি। আপনার ইন্টারনেট চেক করুন।",
     error_name_required: "চালিয়ে যেতে আপনার পুরো নাম লিখুন।",
+    error_otp_invalid: "কোডটি সঠিক নয়। আবার চেষ্টা করুন।",
     sending: "পাঠানো হচ্ছে...",
     verifying: "যাচাই করা হচ্ছে...",
     creating: "অ্যাকাউন্ট তৈরি হচ্ছে...",
     step: "ধাপ",
     of: "এর",
-    welcome_back: "ফিরে আসায় স্বাগতম",
-    join_title: "কৃষক হিসেবে যোগ দিন",
+    welcome_farmer: "কৃষক, স্বাগতম",
+    join_title: "কৃষক অ্যাকাউন্ট তৈরি করুন",
     otp_step1: "আপনার মোবাইল নম্বর দিন",
     otp_step2: "ফোনে আসা OTP কোড দিন",
     profile_title: "আপনার প্রোফাইল পূরণ করুন",
@@ -223,10 +213,10 @@ const T = {
     hero_desc: "భారత రైతుల కోసం ఉచిత AI సాధనాలు — పంట సలహా, వ్యాధి గుర్తింపు, వాతావరణ హెచ్చరికలు & ప్రభుత్వ పథకాలు మీ భాషలో.",
     benefits: ["మీ వ్యవసాయ చరిత్రను సేవ్ చేయండి", "వ్యక్తిగతీకరించిన నీటి షెడ్యూల్ పొందండి", "మీ ప్రాంతానికి వాతావరణ హెచ్చరికలు"],
     farmers_count: "48,500+ మంది రైతులు మమ్మల్ని విశ్వసిస్తారు",
-    sign_in: "సైన్ ఇన్",
-    create_account: "ఖాతా సృష్టించండి",
-    login_phone: "ఫోన్ ఉపయోగించండి",
-    login_email: "ఇమెయిల్ ఉపయోగించండి",
+    farmer_tab: "రైతు",
+    rsk_tab: "RSK / అడ్మిన్",
+    sign_in_google: "Google తో సైన్ ఇన్ చేయండి",
+    or_continue: "లేదా ఫోన్ తో కొనసాగించండి",
     mobile_label: "మీ మొబైల్ నంబర్",
     mobile_placeholder: "10 అంకెల నంబర్ నమోదు చేయండి",
     mobile_hint: "మీకు SMS ద్వారా 6 అంకెల కోడ్ వస్తుంది",
@@ -242,13 +232,14 @@ const T = {
     password_label: "పాస్‌వర్డ్",
     password_placeholder: "మీ పాస్‌వర్డ్ నమోదు చేయండి",
     sign_in_btn: "సైన్ ఇన్",
-    rsk_note: "RSK అధికారులు & అడ్మిన్ — ఇమెయిల్ ద్వారా లాగిన్ చేయండి",
+    rsk_note: "RSK అధికారులు & అడ్మిన్ — నమోదిత ఇమెయిల్ తో సైన్ ఇన్ చేయండి",
     reg_name: "మీ పూర్తి పేరు",
     reg_name_hint: "మీ ID కార్డ్‌లో ఉన్నట్లు",
-    reg_phone: "మొబైల్ నంబర్",
-    reg_phone_hint: "దేశ కోడ్ తో, ఉదా. +91",
+    reg_phone_optional: "ఫోన్ నంబర్ (ఐచ్ఛికం)",
+    reg_phone_hint: "SMS హెచ్చరికలు మరియు ఖాతా పునరుద్ధరణ కోసం",
+    reg_phone_verified: "ధృవీకరించబడిన ఫోన్",
     reg_email: "ఇమెయిల్ చిరునామా",
-    reg_email_hint: "ఐచ్ఛికం, ఖాతా పునరుద్ధరణ కోసం",
+    reg_email_hint: "ఖాతా పునరుద్ధరణ కోసం",
     reg_language: "ఇష్టపడే భాష",
     reg_state: "మీ రాష్ట్రం",
     reg_state_placeholder: "మీ రాష్ట్రం ఎంచుకోండి",
@@ -258,24 +249,19 @@ const T = {
     reg_crop_placeholder: "ఉదా. వరి, పత్తి, గోధుమ",
     reg_soil: "నేల రకం (ఐచ్ఛికం)",
     reg_soil_placeholder: "నేల రకం ఎంచుకోండి",
-    register_btn: "నా ఖాతా సృష్టించండి",
-    have_account: "ఇప్పటికే నమోదు చేసారా?",
-    sign_in_link: "ఇక్కడ సైన్ ఇన్ చేయండి",
-    guest: "దాటవేయి, అతిథిగా కొనసాగించు",
+    go_to_app: "అతిథిగా కొనసాగించు",
     back_home: "హోమ్ పేజీకి వెళ్ళు",
-    error_password_mismatch: "పాస్‌వర్డ్ సరిపోలలేదు — దయచేసి ఒకే పాస్‌వర్డ్ రెండుసార్లు టైప్ చేయండి",
-    error_password_short: "పాస్‌వర్డ్ కనీసం 6 అక్షరాలు ఉండాలి",
-    error_otp_invalid: "ఆ కోడ్ సరైనది కాదు. దయచేసి మళ్ళీ ప్రయత్నించండి.",
     error_generic: "ఏదో తప్పు జరిగింది. దయచేసి మళ్ళీ ప్రయత్నించండి.",
     error_network: "కనెక్ట్ కాలేదు. మీ ఇంటర్నెట్ తనిఖీ చేయండి.",
     error_name_required: "కొనసాగించడానికి దయచేసి మీ పూర్తి పేరు నమోదు చేయండి.",
+    error_otp_invalid: "ఆ కోడ్ సరైనది కాదు. దయచేసి మళ్ళీ ప్రయత్నించండి.",
     sending: "పంపుతోంది...",
     verifying: "ధృవీకరిస్తోంది...",
     creating: "ఖాతా సృష్టిస్తోంది...",
     step: "దశ",
     of: "లో",
-    welcome_back: "తిరిగి స్వాగతం",
-    join_title: "రైతుగా చేరండి",
+    welcome_farmer: "రైతు, స్వాగతం",
+    join_title: "రైతు ఖాతా సృష్టించండి",
     otp_step1: "మీ మొబైల్ నంబర్ నమోదు చేయండి",
     otp_step2: "ఫోన్‌కు వచ్చిన OTP కోడ్ నమోదు చేయండి",
     profile_title: "మీ ప్రొఫైల్‌ను పూర్తి చేయండి",
@@ -294,9 +280,10 @@ const INDIAN_STATES = [
   "Uttar Pradesh", "West Bengal",
 ];
 
-type AuthMode = "login" | "register";
-type LoginMethod = "phone" | "email";
-type PhoneStep = "input" | "otp" | "profile";
+type Mode = "farmer" | "rsk";
+type FlowStep = "idle" | "otp" | "profile";
+
+const googleProvider = new GoogleAuthProvider();
 
 function getErrorMessage(err: unknown, t: typeof T.en): string {
   if (!err) return t.error_generic;
@@ -308,6 +295,8 @@ function getErrorMessage(err: unknown, t: typeof T.en): string {
   if (msg.includes("auth/email-already-in-use")) return "This email is already registered. Try signing in.";
   if (msg.includes("auth/invalid-phone-number")) return "Please enter a valid 10-digit mobile number.";
   if (msg.includes("auth/captcha-check-failed")) return "Verification failed. Please try again.";
+  if (msg.includes("auth/popup-closed-by-user")) return "";
+  if (msg.includes("auth/cancelled-popup-request")) return "";
   return msg || t.error_generic;
 }
 
@@ -319,16 +308,15 @@ export default function LoginPage() {
   const [lang, setLang] = useState<Language>("en");
   const t = T[lang];
 
-  const [mode, setMode] = useState<AuthMode>("login");
-  const [loginMethod, setLoginMethod] = useState<LoginMethod>("phone");
-  const [phoneStep, setPhoneStep] = useState<PhoneStep>("input");
+  const [mode, setMode] = useState<Mode>("farmer");
+  const [flowStep, setFlowStep] = useState<FlowStep>("idle");
 
   // Login fields
   const [phoneLogin, setPhoneLogin] = useState("");
   const [emailLogin, setEmailLogin] = useState("");
   const [passwordLogin, setPasswordLogin] = useState("");
 
-  // Register / profile fields
+  // Profile fields
   const [regName, setRegName] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regEmail, setRegEmail] = useState("");
@@ -343,14 +331,17 @@ export default function LoginPage() {
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [otpPhone, setOtpPhone] = useState("");
 
+  // Tracks which auth method triggered profile completion
+  const [authMethod, setAuthMethod] = useState<"phone" | "google">("phone");
+
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // If the user is already authenticated when landing here, send them on.
+  // If already authenticated on mount, redirect.
   useEffect(() => {
     if (authLoading || !user) return;
     if (initialHandled.current) return;
-    if (role === null) return; // wait until the role has been resolved
+    if (role === null) return;
     initialHandled.current = true;
     const dest = loginRedirect || (role === "farmer" ? "/farmer" : "/dashboard");
     setLoginRedirect(null);
@@ -365,23 +356,14 @@ export default function LoginPage() {
     );
   }
 
-  // Lazily (re)create the invisible reCAPTCHA verifier right before it is
-  // needed. Clearing any previous instance first avoids the
-  // "reCAPTCHA has already been rendered in this element" error that occurs
-  // when a verifier is created on mount (e.g. under React StrictMode).
+  // ── Helpers ──────────────────────────────────────────────────
   async function makeVerifier(): Promise<RecaptchaVerifier> {
     if (!auth) throw new Error("auth-unavailable");
     if (recaptchaVerifierRef.current) {
-      try {
-        recaptchaVerifierRef.current.clear();
-      } catch {
-        // ignore
-      }
+      try { recaptchaVerifierRef.current.clear(); } catch {}
       recaptchaVerifierRef.current = null;
     }
-    const verifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-      size: "invisible",
-    });
+    const verifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
     await verifier.render();
     recaptchaVerifierRef.current = verifier;
     return verifier;
@@ -390,36 +372,23 @@ export default function LoginPage() {
   useEffect(() => {
     return () => {
       if (recaptchaVerifierRef.current) {
-        try {
-          recaptchaVerifierRef.current.clear();
-        } catch {
-          // ignore
-        }
+        try { recaptchaVerifierRef.current.clear(); } catch {}
         recaptchaVerifierRef.current = null;
       }
     };
   }, []);
 
-  const resetPhoneFlow = () => {
-    setPhoneStep("input");
+  const resetFlow = () => {
+    setFlowStep("idle");
     setOtpCode("");
     setConfirmationResult(null);
     setOtpPhone("");
     setError("");
   };
 
-  const switchMode = (m: AuthMode) => {
-    setMode(m);
-    setError("");
-    resetPhoneFlow();
-    if (m === "register") setLoginMethod("phone");
-  };
-
-  const handleSendOtp = async () => {
-    if (!auth) {
-      setError("Login service is unavailable right now. Please try again later.");
-      return;
-    }
+  // ── Handlers ─────────────────────────────────────────────────
+  const handlePhoneSendOtp = async () => {
+    if (!auth) { setError("Login service is unavailable."); return; }
     if (phoneLogin.replace(/\D/g, "").length !== 10) {
       setError("Please enter a valid 10-digit mobile number.");
       return;
@@ -432,15 +401,17 @@ export default function LoginPage() {
       const result = await signInWithPhoneNumber(auth, phoneNumber, verifier);
       setConfirmationResult(result);
       setOtpPhone(phoneNumber);
-      setPhoneStep("otp");
+      setAuthMethod("phone");
+      setFlowStep("otp");
     } catch (err: unknown) {
-      setError(getErrorMessage(err, t));
+      const msg = getErrorMessage(err, t);
+      if (msg) setError(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleVerifyOtp = async () => {
+  const handleOtpConfirm = async () => {
     if (!confirmationResult) return;
     setError("");
     setSubmitting(true);
@@ -459,11 +430,46 @@ export default function LoginPage() {
           return;
         }
       }
-      // No farmer record yet — collect profile details to finish signup.
+      // New farmer — collect profile
       setRegPhone(otpPhone);
-      setPhoneStep("profile");
+      setFlowStep("profile");
     } catch (err: unknown) {
-      setError(getErrorMessage(err, t));
+      const msg = getErrorMessage(err, t);
+      if (msg) setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (!auth) { setError("Login service is unavailable."); return; }
+    setError("");
+    setSubmitting(true);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const { email, displayName } = result.user;
+
+      if (email) {
+        const res = await fetch(`${API_BASE_URL}/farmers/by-email/${encodeURIComponent(email)}`);
+        if (res.ok) {
+          const profile: FarmerOut | null = await res.json();
+          if (profile && profile.id) {
+            setFarmerProfile(profile);
+            const dest = loginRedirect || "/farmer";
+            setLoginRedirect(null);
+            navigate(dest, { replace: true });
+            return;
+          }
+        }
+      }
+      // New farmer — show profile with Google data
+      setRegName(displayName || "");
+      setRegEmail(email || "");
+      setAuthMethod("google");
+      setFlowStep("profile");
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err, t);
+      if (msg) setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -471,10 +477,7 @@ export default function LoginPage() {
 
   const handleEmailLogin = async (e: FormEvent) => {
     e.preventDefault();
-    if (!auth) {
-      setError("Login service is unavailable right now. Please try again later.");
-      return;
-    }
+    if (!auth) { setError("Login service is unavailable."); return; }
     setError("");
     setSubmitting(true);
     try {
@@ -502,18 +505,18 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       const token = await auth.currentUser.getIdToken();
-      const authHeaders = {
+      const headers = {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       };
 
-      const cleanedPhone = regPhone.startsWith("+")
-        ? regPhone
-        : `+91${regPhone.replace(/\s/g, "")}`;
+      const cleanedPhone = regPhone.trim()
+        ? (regPhone.startsWith("+") ? regPhone : `+91${regPhone.replace(/\s/g, "")}`)
+        : undefined;
 
       const farmer = await apiRequest<FarmerOut>("/farmers", {
         method: "POST",
-        headers: authHeaders,
+        headers,
         body: {
           name: regName.trim(),
           phone: cleanedPhone,
@@ -525,17 +528,11 @@ export default function LoginPage() {
       });
 
       if (farmer.id) {
-        const plotPayload: Partial<PlotCreate> = { farmer_id: farmer.id, ward_id: "general" };
-        if (regCrop) plotPayload.current_crop = regCrop;
-        if (regSoil) plotPayload.soil_type = regSoil;
-        try {
-          await apiRequest<PlotOut>("/plots", {
-            method: "POST",
-            headers: authHeaders,
-            body: plotPayload,
-          });
-        } catch {
-          // optional
+        if (regCrop || regSoil) {
+          const plot: Partial<PlotCreate> = { farmer_id: farmer.id, ward_id: "general" };
+          if (regCrop) plot.current_crop = regCrop;
+          if (regSoil) plot.soil_type = regSoil;
+          try { await apiRequest<PlotOut>("/plots", { method: "POST", headers, body: plot }); } catch {}
         }
       }
 
@@ -554,21 +551,20 @@ export default function LoginPage() {
     en: "EN", hi: "हिन्दी", bn: "বাংলা", te: "తెలుగు",
   };
 
-  const isRegister = mode === "register";
+  const isFarmer = mode === "farmer";
 
+  // ── Render ───────────────────────────────────────────────────
   return (
     <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-8 px-4">
       <div className="w-full max-w-4xl bg-white border-2 border-emerald-700 rounded-3xl shadow-[8px_8px_0px_0px_rgba(4,120,87,1)] overflow-hidden grid md:grid-cols-[1fr_1.2fr]">
-        {/* ── Hero panel ────────────────────────────────────────── */}
+        {/* ── Hero panel ──────────────────────────────────────── */}
         <div
           className="relative bg-gradient-to-br from-emerald-700/92 via-emerald-600/92 to-teal-700/92 p-8 md:p-10 flex flex-col text-white overflow-hidden bg-cover bg-center"
           style={{ minHeight: 320, backgroundImage: "url(/login-bg.png)" }}
         >
-          {/* Decorative blobs */}
           <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-28 -left-16 w-72 h-72 bg-teal-300/15 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Language selector */}
           <div className="relative z-10 flex justify-end mb-2">
             <div className="flex bg-white/10 backdrop-blur border border-white/20 rounded-xl p-0.5 gap-0.5">
               {(Object.keys(LANG_LABELS) as Language[]).map((l) => (
@@ -578,7 +574,6 @@ export default function LoginPage() {
                   className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition cursor-pointer ${
                     lang === l ? "bg-white text-emerald-800" : "text-white/70 hover:text-white"
                   }`}
-                  aria-label={l === "en" ? "English" : l === "hi" ? "हिन्दी" : l === "bn" ? "বাংলা" : "తెలుగు"}
                 >
                   {LANG_LABELS[l]}
                 </button>
@@ -586,7 +581,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Content */}
           <div className="relative z-10 flex-1 flex flex-col justify-center">
             <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur px-3 py-1.5 rounded-full text-[10px] font-bold tracking-widest border border-white/20 self-start mb-4">
               <img src={LOGO} alt="BHUMI" className="w-5 h-5 rounded-md border border-white/40 object-cover" />
@@ -601,7 +595,6 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Benefits + stats */}
           <div className="relative z-10 mt-4 space-y-2">
             {t.benefits.map((item) => (
               <div key={item} className="flex items-center gap-2.5 text-xs">
@@ -615,29 +608,29 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* ── Form panel ────────────────────────────────────────── */}
+        {/* ── Form panel ──────────────────────────────────────── */}
         <div className="p-6 md:p-8 lg:p-10">
-          {/* Step indicator + mode tabs */}
+          {/* Role tabs */}
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-display font-black text-stone-900">
-              {isRegister ? t.join_title : t.welcome_back}
+              {isFarmer ? t.welcome_farmer : t.rsk_tab}
             </h3>
             <div className="flex border-2 border-stone-200 rounded-xl p-0.5">
-              {(["login", "register"] as const).map((m) => (
+              {(["farmer", "rsk"] as const).map((m) => (
                 <button
                   key={m}
-                  onClick={() => switchMode(m)}
+                  onClick={() => { setMode(m); resetFlow(); setError(""); }}
                   className={`px-4 py-2 text-[11px] font-bold rounded-lg transition cursor-pointer ${
                     mode === m ? "bg-emerald-600 text-white shadow-sm" : "text-stone-400 hover:text-stone-700"
                   }`}
                 >
-                  {m === "login" ? t.sign_in : t.create_account}
+                  {m === "farmer" ? t.farmer_tab : t.rsk_tab}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Error message */}
+          {/* Error */}
           {error && (
             <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl px-4 py-3.5 mb-5 flex items-start gap-2.5 text-sm font-semibold text-rose-700 leading-relaxed">
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -645,13 +638,11 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* ── PROFILE COMPLETION (signup step 3) ───────────────── */}
-          {phoneStep === "profile" ? (
+          {/* ── PROFILE COMPLETION ──────────────────────────────── */}
+          {flowStep === "profile" ? (
             <form onSubmit={handleProfileComplete} className="space-y-3.5">
-              <div className="mb-1">
-                <h4 className="text-sm font-display font-black text-stone-900">{t.profile_title}</h4>
-                <p className="text-[11px] text-stone-400">{t.profile_subtitle}</p>
-              </div>
+              <h4 className="text-sm font-display font-black text-stone-900">{t.profile_title}</h4>
+              <p className="text-[11px] text-stone-400">{t.profile_subtitle}</p>
 
               {/* Name */}
               <div>
@@ -670,21 +661,34 @@ export default function LoginPage() {
                 <p className="mt-0.5 text-[11px] text-stone-400">{t.reg_name_hint}</p>
               </div>
 
-              {/* Phone (read-only, verified) */}
+              {/* Phone */}
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_phone}</label>
-                <div className="flex items-center gap-2.5 bg-stone-100 border-2 border-stone-200 rounded-2xl px-4">
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  {authMethod === "phone" ? t.reg_phone_verified : t.reg_phone_optional}
+                </label>
+                <div className={`flex items-center gap-2.5 rounded-2xl px-4 transition ${
+                  authMethod === "phone"
+                    ? "bg-stone-100 border-2 border-stone-200"
+                    : "bg-stone-50 border-2 border-stone-300 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100"
+                }`}>
                   <Phone className="w-5 h-5 text-stone-400 shrink-0" />
                   <input
                     type="tel"
                     value={regPhone}
-                    readOnly
-                    className="w-full py-3 text-sm bg-transparent font-semibold text-stone-500 cursor-not-allowed"
+                    onChange={(e) => setRegPhone(e.target.value)}
+                    readOnly={authMethod === "phone"}
+                    placeholder="+919876543210"
+                    className={`w-full py-3 text-sm bg-transparent focus:outline-none font-semibold ${
+                      authMethod === "phone" ? "text-stone-500 cursor-not-allowed" : ""
+                    }`}
                   />
                 </div>
+                <p className="mt-0.5 text-[11px] text-stone-400">
+                  {authMethod === "phone" ? "" : t.reg_phone_hint}
+                </p>
               </div>
 
-              {/* Email (optional) */}
+              {/* Email (prefilled for Google) */}
               <div>
                 <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_email}</label>
                 <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
@@ -693,7 +697,7 @@ export default function LoginPage() {
                     type="email"
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder={t.email_placeholder}
+                    placeholder="your@email.com"
                     className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
                   />
                 </div>
@@ -722,26 +726,17 @@ export default function LoginPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_state}</label>
-                  <select
-                    value={regState}
-                    onChange={(e) => setRegState(e.target.value)}
-                    className="w-full py-3 px-4 text-sm bg-stone-50 border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 font-semibold"
-                  >
+                  <select value={regState} onChange={(e) => setRegState(e.target.value)}
+                    className="w-full py-3 px-4 text-sm bg-stone-50 border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 font-semibold">
                     <option value="">{t.reg_state_placeholder}</option>
-                    {INDIAN_STATES.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
+                    {INDIAN_STATES.map((s) => (<option key={s} value={s}>{s}</option>))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_district}</label>
-                  <input
-                    type="text"
-                    value={regDistrict}
-                    onChange={(e) => setRegDistrict(e.target.value)}
+                  <input type="text" value={regDistrict} onChange={(e) => setRegDistrict(e.target.value)}
                     placeholder={t.reg_district_placeholder}
-                    className="w-full py-3 px-4 text-sm bg-stone-50 border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 font-semibold"
-                  />
+                    className="w-full py-3 px-4 text-sm bg-stone-50 border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 font-semibold" />
                 </div>
               </div>
 
@@ -749,223 +744,160 @@ export default function LoginPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_crop}</label>
-                  <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
+                  <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500">
                     <Sprout className="w-5 h-5 text-stone-400 shrink-0" />
-                    <input
-                      type="text"
-                      value={regCrop}
-                      onChange={(e) => setRegCrop(e.target.value)}
+                    <input type="text" value={regCrop} onChange={(e) => setRegCrop(e.target.value)}
                       placeholder={t.reg_crop_placeholder}
-                      className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
-                    />
+                      className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">{t.reg_soil}</label>
-                  <select
-                    value={regSoil}
-                    onChange={(e) => setRegSoil(e.target.value)}
-                    className="w-full py-3 px-4 text-sm bg-stone-50 border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 font-semibold"
-                  >
+                  <select value={regSoil} onChange={(e) => setRegSoil(e.target.value)}
+                    className="w-full py-3 px-4 text-sm bg-stone-50 border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 font-semibold">
                     <option value="">{t.reg_soil_placeholder}</option>
-                    {SOIL_TYPES.map((s) => (
-                      <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                    ))}
+                    {SOIL_TYPES.map((s) => (<option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>))}
                   </select>
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] hover:shadow-[4px_4px_0px_0px_rgba(4,120,87,1)] transition-all cursor-pointer disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2.5 mt-1"
-              >
-                {submitting ? (
-                  <><Loader2 className="w-5 h-5 animate-spin" /> {t.creating}</>
-                ) : (
-                  <><CheckCircle className="w-5 h-5" /> {t.register_btn}</>
-                )}
+              <button type="submit" disabled={submitting}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] hover:shadow-[4px_4px_0px_0px_rgba(4,120,87,1)] transition-all cursor-pointer disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2.5 mt-1">
+                {submitting ? <><Loader2 className="w-5 h-5 animate-spin" /> {t.creating}</>
+                  : <><CheckCircle className="w-5 h-5" /> {t.join_title}</>}
               </button>
 
               <p className="text-xs text-stone-500 text-center mt-2 font-medium">
-                {t.have_account}{" "}
-                <button type="button" onClick={() => switchMode("login")} className="text-emerald-700 font-bold hover:underline cursor-pointer">
-                  {t.sign_in_link}
+                <button type="button" onClick={() => {
+                  setFlowStep("idle");
+                  setRegName("");
+                  setRegPhone("");
+                  setRegEmail("");
+                  setAuthMethod("phone");
+                  setError("");
+                }}
+                  className="text-emerald-700 font-bold hover:underline cursor-pointer">
+                  Use a different account
                 </button>
               </p>
             </form>
-          ) : (
-            <>
-              {/* ── LOGIN (email) ─────────────────────────────────── */}
-              {!isRegister && loginMethod === "email" && (
-                <form onSubmit={handleEmailLogin} className="space-y-4">
+          ) : isFarmer ? (
+            /* ── FARMER TAB ───────────────────────────────────── */
+            <div className="space-y-5">
+              {/* Google sign-in */}
+              <button
+                onClick={handleGoogleSignIn}
+                disabled={submitting}
+                className="w-full bg-white hover:bg-stone-50 text-stone-900 font-display font-black text-sm px-5 py-3.5 rounded-2xl border-2 border-stone-900 shadow-[3px_3px_0px_0px_rgba(28,25,23,1)] flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                {t.sign_in_google}
+              </button>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <span className="flex-1 border-t border-stone-200" />
+                <span className="text-[11px] font-mono font-bold text-stone-400">{t.or_continue}</span>
+                <span className="flex-1 border-t border-stone-200" />
+              </div>
+
+              {/* Phone OTP */}
+              {flowStep === "idle" && (
+                <form onSubmit={(e) => { e.preventDefault(); handlePhoneSendOtp(); }} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1.5">{t.email_label}</label>
-                    <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
-                      <Mail className="w-5 h-5 text-stone-400 shrink-0" />
-                      <input
-                        type="email"
-                        value={emailLogin}
-                        onChange={(e) => setEmailLogin(e.target.value)}
-                        placeholder={t.email_placeholder}
-                        className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
-                        required
-                      />
+                    <label className="text-xs font-bold text-stone-600">{t.otp_step1}</label>
+                    <div className="flex gap-2 mt-1.5">
+                      <div className="bg-stone-100 border-2 border-stone-300 rounded-2xl px-4 flex items-center text-sm font-bold text-stone-500 shrink-0">+91</div>
+                      <input type="tel" inputMode="numeric"
+                        value={phoneLogin}
+                        onChange={(e) => setPhoneLogin(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                        placeholder={t.mobile_placeholder}
+                        className="w-full py-3 px-4 text-base bg-white border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-bold transition"
+                        required autoFocus />
                     </div>
+                    <p className="mt-1 text-xs text-stone-400 flex items-center gap-1">
+                      <MessageSquare className="w-3 h-3" /> {t.mobile_hint}
+                    </p>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1.5">{t.password_label}</label>
-                    <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
-                      <Lock className="w-5 h-5 text-stone-400 shrink-0" />
-                      <input
-                        type="password"
-                        value={passwordLogin}
-                        onChange={(e) => setPasswordLogin(e.target.value)}
-                        placeholder={t.password_placeholder}
-                        className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] transition-all cursor-pointer disabled:shadow-none disabled:cursor-not-allowed"
-                  >
-                    {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t.sign_in_btn}
+                  <button type="submit"
+                    disabled={submitting || phoneLogin.replace(/\D/g, "").length !== 10}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] flex items-center justify-center gap-2.5 cursor-pointer disabled:shadow-none disabled:cursor-not-allowed">
+                    {submitting ? <><Loader2 className="w-5 h-5 animate-spin" /> {t.sending}</>
+                      : <><Smartphone className="w-5 h-5" /> {t.get_otp}</>}
                   </button>
-                  <p className="text-[10px] text-stone-400 text-center font-mono">{t.rsk_note}</p>
                 </form>
               )}
 
-              {/* ── PHONE FLOW (login + register) ─────────────────── */}
-              {((!isRegister && loginMethod === "phone") || isRegister) && (
-                <>
-                  {/* Method toggle (login only) */}
-                  {!isRegister && (
-                    <div className="flex gap-2 mb-6">
-                      {(["phone", "email"] as const).map((m) => (
-                        <button
-                          key={m}
-                          onClick={() => { setLoginMethod(m); setError(""); resetPhoneFlow(); }}
-                          className={`flex-1 py-3 text-xs font-bold rounded-2xl border-2 flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                            loginMethod === m
-                              ? "bg-emerald-50 border-emerald-600 text-emerald-800 shadow-[2px_2px_0px_0px_rgba(5,150,105,1)]"
-                              : "bg-white border-stone-200 text-stone-500 hover:border-stone-400"
-                          }`}
-                        >
-                          {m === "phone" ? <Smartphone className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
-                          {m === "phone" ? t.login_phone : t.login_email}
-                        </button>
-                      ))}
+              {flowStep === "otp" && (
+                <form onSubmit={(e) => { e.preventDefault(); handleOtpConfirm(); }} className="space-y-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">2</span>
+                      <label className="text-xs font-bold text-stone-600">{t.otp_step2}</label>
                     </div>
-                  )}
-
-                  {/* Step 1: phone input */}
-                  {phoneStep === "input" && (
-                    <form onSubmit={(e) => { e.preventDefault(); handleSendOtp(); }} className="space-y-5">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">1</span>
-                          <label className="text-xs font-bold text-stone-600">{t.otp_step1}</label>
-                        </div>
-                        <div className="flex gap-2 mt-2">
-                          <div className="bg-stone-100 border-2 border-stone-300 rounded-2xl px-4 flex items-center text-sm font-bold text-stone-500 shrink-0">
-                            +91
-                          </div>
-                          <input
-                            type="tel"
-                            inputMode="numeric"
-                            value={phoneLogin}
-                            onChange={(e) => setPhoneLogin(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                            placeholder={t.mobile_placeholder}
-                            className="w-full py-3 px-4 text-base bg-white border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-bold transition"
-                            required
-                            autoFocus
-                          />
-                        </div>
-                        <p className="mt-1.5 text-xs text-stone-400 flex items-center gap-1">
-                          <MessageSquare className="w-3 h-3" />
-                          {t.mobile_hint}
-                        </p>
-                      </div>
-                      <button
-                        type="submit"
-                        disabled={submitting || phoneLogin.replace(/\D/g, "").length !== 10}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] hover:shadow-[4px_4px_0px_0px_rgba(4,120,87,1)] transition-all cursor-pointer disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2.5"
-                      >
-                        {submitting ? (
-                          <><Loader2 className="w-5 h-5 animate-spin" /> {t.sending}</>
-                        ) : (
-                          <><Smartphone className="w-5 h-5" /> {t.get_otp}</>
-                        )}
-                      </button>
-                    </form>
-                  )}
-
-                  {/* Step 2: OTP input */}
-                  {phoneStep === "otp" && (
-                    <form onSubmit={(e) => { e.preventDefault(); handleVerifyOtp(); }} className="space-y-5">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">2</span>
-                          <label className="text-xs font-bold text-stone-600">{t.otp_step2}</label>
-                        </div>
-                        <p className="text-sm text-stone-500 mt-2">
-                          {t.otp_sent_to} <strong className="text-stone-900">{otpPhone}</strong>
-                        </p>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={otpCode}
-                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                          placeholder={t.otp_placeholder}
-                          className="w-full py-3.5 px-4 text-xl tracking-[0.5em] text-center bg-white border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-bold transition mt-2"
-                          required
-                          maxLength={6}
-                          autoFocus
-                        />
-                        <p className="mt-1.5 text-xs text-stone-400 flex items-center gap-1">
-                          <MessageSquare className="w-3 h-3" />
-                          {t.otp_hint}
-                        </p>
-                      </div>
-                      <button
-                        type="submit"
-                        disabled={submitting || otpCode.length !== 6}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] hover:shadow-[4px_4px_0px_0px_rgba(4,120,87,1)] transition-all cursor-pointer disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2.5"
-                      >
-                        {submitting ? (
-                          <><Loader2 className="w-5 h-5 animate-spin" /> {t.verifying}</>
-                        ) : (
-                          <><CheckCircle className="w-5 h-5" /> {t.verify_otp}</>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { resetPhoneFlow(); }}
-                        className="w-full text-xs font-semibold text-stone-400 hover:text-stone-700 transition cursor-pointer underline underline-offset-2"
-                      >
-                        {t.change_phone}
-                      </button>
-                    </form>
-                  )}
-                </>
+                    <p className="text-sm text-stone-500 mt-2">
+                      {t.otp_sent_to} <strong className="text-stone-900">{otpPhone}</strong>
+                    </p>
+                    <input type="text" inputMode="numeric"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder={t.otp_placeholder}
+                      className="w-full py-3.5 px-4 text-xl tracking-[0.5em] text-center bg-white border-2 border-stone-300 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-bold transition mt-2"
+                      required maxLength={6} autoFocus />
+                    <p className="mt-1.5 text-xs text-stone-400 flex items-center gap-1">
+                      <MessageSquare className="w-3 h-3" /> {t.otp_hint}
+                    </p>
+                  </div>
+                  <button type="submit"
+                    disabled={submitting || otpCode.length !== 6}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] flex items-center justify-center gap-2.5 cursor-pointer disabled:shadow-none disabled:cursor-not-allowed">
+                    {submitting ? <><Loader2 className="w-5 h-5 animate-spin" /> {t.verifying}</>
+                      : <><CheckCircle className="w-5 h-5" /> {t.verify_otp}</>}
+                  </button>
+                  <button type="button" onClick={() => { resetFlow(); setError(""); }}
+                    className="w-full text-xs font-semibold text-stone-400 hover:text-stone-700 transition cursor-pointer underline underline-offset-2">
+                    {t.change_phone}
+                  </button>
+                </form>
               )}
-            </>
+            </div>
+          ) : (
+            /* ── RSK / ADMIN TAB ──────────────────────────────── */
+            <form onSubmit={handleEmailLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1.5">{t.email_label}</label>
+                <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
+                  <Mail className="w-5 h-5 text-stone-400 shrink-0" />
+                  <input type="email" value={emailLogin} onChange={(e) => setEmailLogin(e.target.value)}
+                    placeholder={t.email_placeholder}
+                    className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold" required />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1.5">{t.password_label}</label>
+                <div className="flex items-center gap-2.5 bg-stone-50 border-2 border-stone-300 rounded-2xl px-4 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
+                  <Lock className="w-5 h-5 text-stone-400 shrink-0" />
+                  <input type="password" value={passwordLogin} onChange={(e) => setPasswordLogin(e.target.value)}
+                    placeholder={t.password_placeholder}
+                    className="w-full py-3 text-sm bg-transparent focus:outline-none font-semibold" required />
+                </div>
+              </div>
+              <button type="submit" disabled={submitting}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-300 text-white font-display font-black text-base px-5 py-3.5 rounded-2xl border-2 border-emerald-800 shadow-[3px_3px_0px_0px_rgba(5,150,105,1)] cursor-pointer disabled:shadow-none disabled:cursor-not-allowed">
+                {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t.sign_in_btn}
+              </button>
+              <p className="text-[10px] text-stone-400 text-center font-mono">{t.rsk_note}</p>
+            </form>
           )}
 
-          {/* ── Footer ──────────────────────────────────────────── */}
+          {/* ── Footer ────────────────────────────────────────── */}
           <div className="mt-6 pt-4 border-t border-stone-100">
             <div className="flex items-center justify-center gap-4 text-xs font-medium text-stone-400">
               <Link to="/app" className="hover:text-emerald-700 transition flex items-center gap-1">
-                <MessageSquare className="w-3.5 h-3.5" />
-                {t.guest}
+                <MessageSquare className="w-3.5 h-3.5" /> {t.go_to_app}
               </Link>
               <span className="text-stone-200">|</span>
-              <Link to="/" className="hover:text-stone-600 transition">
-                {t.back_home}
-              </Link>
+              <Link to="/" className="hover:text-stone-600 transition">{t.back_home}</Link>
             </div>
           </div>
         </div>

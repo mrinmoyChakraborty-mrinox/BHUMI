@@ -58,7 +58,7 @@ export interface WardOut {
 
 export interface FarmerCreate {
   name: string;
-  phone: string;
+  phone?: string;
   preferred_language?: Language;
   ward_id?: string;
   state?: string;
@@ -81,7 +81,7 @@ export interface FarmerUpdate {
 export interface FarmerOut {
   id: string;
   name: string;
-  phone: string;
+  phone?: string | null;
   preferred_language: string;
   ward_id: string;
   state?: string | null;

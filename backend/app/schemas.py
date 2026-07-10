@@ -69,7 +69,7 @@ class WardOut(BaseModel):
 # ---------- Farmers ----------
 class FarmerCreate(BaseModel):
     name: str
-    phone: str
+    phone: Optional[str] = None
     preferred_language: str = "hi"
     ward_id: str = "general"
     state: Optional[str] = None
@@ -77,7 +77,9 @@ class FarmerCreate(BaseModel):
     email: Optional[str] = None
 
     @validator("phone")
-    def validate_phone(cls, v: str) -> str:
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return None
         return validate_e164(v)
 
 

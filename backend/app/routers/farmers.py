@@ -37,6 +37,12 @@ def get_farmer_by_phone(phone: str):
     return doc_to_dict(docs[0]) if docs else None
 
 
+@router.get("/by-email/{email}", response_model=FarmerOut | None)
+def get_farmer_by_email(email: str):
+    docs = list(db.collection(COLLECTION).where("email", "==", email).limit(1).stream())
+    return doc_to_dict(docs[0]) if docs else None
+
+
 @router.get("/{farmer_id}", response_model=FarmerOut)
 def get_farmer(farmer_id: str):
     return get_or_404(db.collection(COLLECTION), farmer_id, "Farmer")

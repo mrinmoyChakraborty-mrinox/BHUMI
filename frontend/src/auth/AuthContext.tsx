@@ -81,20 +81,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const token = await firebaseUser.getIdToken();
         setIdToken(token);
         const detectedRole = await fetchRole(token);
-        if (!detectedRole && firebaseUser.phoneNumber) {
-          try {
-            const phone = encodeURIComponent(firebaseUser.phoneNumber);
-            const res = await fetch(`${API_BASE_URL}/farmers/by-phone/${phone}`);
-            if (res.ok) {
-              const profile: FarmerOut = await res.json();
-              if (profile) {
-                setFarmerId(profile.id);
-                setFarmerProfile(profile);
-                setRole("farmer");
+        if (!detectedRole) {
+          let profile: FarmerOut | null = null;
+          // Try phone lookup first
+          if (firebaseUser.phoneNumber) {
+            try {
+              const phone = encodeURIComponent(firebaseUser.phoneNumber);
+              const res = await fetch(`${API_BASE_URL}/farmers/by-phone/${phone}`);
+              if (res.ok) {
+                profile = await res.json();
               }
+            } catch {
+              // ignore
             }
-          } catch {
-            // phone lookup failed — user remains anonymous
+          }
+          // Fall back to email lookup (handles Google-auth farmers)
+          if (!profile && firebaseUser.email) {
+            try {
+              const email = encodeURIComponent(firebaseUser.email);
+              const res = await fetch(`${API_BASE_URL}/farmers/by-email/${email}`);
+              if (res.ok) {
+                profile = await res.json();
+              }
+            } catch {
+              // ignore
+            }
+          }
+          if (profile) {
+            setFarmerId(profile.id);
+            setFarmerProfile(profile);
+            setRole("farmer");
           }
         }
       } else {
